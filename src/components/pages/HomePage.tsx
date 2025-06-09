@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { startTimer, pauseTimer, resetTimer, setMode, TimerMode } from '@/store/slices/timerSlice';
+import { startTimer, pauseTimer, resetTimer, setMode, tick, TimerMode } from '@/store/slices/timerSlice';
 import { completePomodoro } from '@/store/slices/userSlice';
 import { formatTime } from '@/utils/formatTime';
 
@@ -22,6 +22,15 @@ const HomePage: React.FC = () => {
   // Calculate experience needed for next level
   const expNeededForNextLevel = level * 100;
   const expProgress = (experience / expNeededForNextLevel) * 100;
+
+  // 실제 타이머 동작: isRunning이 true일 때 1초마다 tick() 디스패치
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(() => {
+      dispatch(tick());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning, dispatch]);
 
   // Handle timer completion
   useEffect(() => {
