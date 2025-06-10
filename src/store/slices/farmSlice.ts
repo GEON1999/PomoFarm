@@ -182,6 +182,7 @@ const farmSlice = createSlice({
         animal.productReadyAt = null;
         animal.lastFed = Date.now(); // Reset timer after collection
     },
+    resetFarm: () => initialState,
   },
 });
 
@@ -192,6 +193,7 @@ export const {
   plantCrop,
   harvestPlot,
   collectProduct,
+  resetFarm,
 } = farmSlice.actions;
 
 export const sellItem = (payload: { itemId: string; quantity: number; }) => 

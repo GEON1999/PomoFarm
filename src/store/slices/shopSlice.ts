@@ -160,6 +160,7 @@ const shopSlice = createSlice({
         ];
       }
     },
+    resetShop: () => initialState,
   },
 });
 
@@ -281,6 +282,12 @@ export const pullGacha = (payload: { category: 'plant' | 'animal', gachaType: 's
     return results;
   };
 
-export const { addItem, updateItem, removeItem, refreshShop } = shopSlice.actions;
+export const {
+  addItem,
+  updateItem,
+  removeItem,
+  refreshShop,
+  resetShop,
+} = shopSlice.actions;
 
 export default shopSlice.reducer;

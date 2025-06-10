@@ -37,12 +37,7 @@ const timerSlice = createSlice({
     pauseTimer: (state) => {
       state.isRunning = false;
     },
-    resetTimer: (state) => {
-      state.isRunning = false;
-      state.mode = "focus";
-      state.timeLeft = state.focusDuration * 60;
-      state.endTime = null;
-    },
+    resetTimer: () => initialState,
     tick: (state) => {
       if (!state.isRunning) return;
 

@@ -14,6 +14,7 @@ import {
 // Import your reducers
 import timerReducer from './slices/timerSlice';
 import farmReducer from './slices/farmSlice';
+import settingsReducer from './slices/settingsSlice';
 import userReducer from './slices/userSlice';
 import shopReducer from './slices/shopSlice';
 import notificationReducer from './slices/notificationSlice';
@@ -22,6 +23,7 @@ import notificationReducer from './slices/notificationSlice';
 export const rootReducer = combineReducers({
   timer: timerReducer,
   farm: farmReducer,
+  settings: settingsReducer,
   user: userReducer,
   shop: shopReducer,
   notification: notificationReducer,

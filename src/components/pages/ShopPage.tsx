@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { pullGacha, ShopItem } from '@/store/slices/shopSlice';
 import { showNotification } from '@/store/slices/notificationSlice';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ShopPage: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const diamonds = useAppSelector(state => state.user.diamonds);
   const gold = useAppSelector(state => state.user.gold);
@@ -23,12 +25,12 @@ const ShopPage: React.FC = () => {
       if (results && results.length > 0) {
         setGachaResult(results);
         setShowResult(true);
-        dispatch(showNotification({ message: `You got ${results.length} item(s)!`, type: 'success' }));
+        dispatch(showNotification({ message: t('gachaSuccess', { count: results.length }), type: 'success' }));
       } else {
-        dispatch(showNotification({ message: 'Gacha pull failed. Not enough funds or no items available.', type: 'error' }));
+        dispatch(showNotification({ message: t('gachaFailed'), type: 'error' }));
       }
     } catch (e: any) {
-      dispatch(showNotification({ message: e.message || 'An unexpected error occurred.', type: 'error' }));
+      dispatch(showNotification({ message: e.message || t('unexpectedError'), type: 'error' }));
     } finally {
       setIsPulling(false);
     }
@@ -57,12 +59,12 @@ const ShopPage: React.FC = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        Gacha Shop
+        {t('shop')}
       </motion.h1>
 
       <div className="mb-6 flex justify-center gap-4">
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTab('plant')} className={`px-6 py-3 rounded-full font-semibold text-lg transition-colors ${tab === 'plant' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-emerald-700 shadow-md'}`}>🌱 Plant Gacha</motion.button>
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTab('animal')} className={`px-6 py-3 rounded-full font-semibold text-lg transition-colors ${tab === 'animal' ? 'bg-sky-600 text-white shadow-lg' : 'bg-white text-sky-700 shadow-md'}`}>🐾 Animal Gacha</motion.button>
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTab('plant')} className={`px-6 py-3 rounded-full font-semibold text-lg transition-colors ${tab === 'plant' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-emerald-700 shadow-md'}`}>{t('plantGacha')}</motion.button>
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTab('animal')} className={`px-6 py-3 rounded-full font-semibold text-lg transition-colors ${tab === 'animal' ? 'bg-sky-600 text-white shadow-lg' : 'bg-white text-sky-700 shadow-md'}`}>{t('animalGacha')}</motion.button>
       </div>
       
       <motion.div 
@@ -73,14 +75,14 @@ const ShopPage: React.FC = () => {
         className="bg-white/50 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-200"
       >
         <div className="flex items-center justify-center gap-6 mb-6 text-xl font-semibold text-stone-700">
-          <span className="flex items-center gap-2">💎 <span className="text-blue-500">{diamonds}</span></span>
-          <span className="flex items-center gap-2">💰 <span className="text-yellow-600">{gold}</span></span>
+          <span className="flex items-center gap-2">💎 <span className="text-blue-500">{diamonds}</span> {t('diamonds')}</span>
+          <span className="flex items-center gap-2">💰 <span className="text-yellow-600">{gold}</span> {t('coins')}</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || gold < 500} onClick={() => handleGacha('single', 'gold')} className="px-4 py-3 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 disabled:bg-gray-400 shadow-md transition-colors">Single Pull (500G)</motion.button>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || gold < 4500} onClick={() => handleGacha('multi', 'gold')} className="px-4 py-3 bg-yellow-600 text-white rounded-lg font-bold hover:bg-yellow-700 disabled:bg-gray-400 shadow-md transition-colors">10 Pulls (4500G)</motion.button>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || diamonds < 100} onClick={() => handleGacha('single', 'diamond')} className="px-4 py-3 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 disabled:bg-gray-400 shadow-md transition-colors">Single Pull (100💎)</motion.button>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || diamonds < 900} onClick={() => handleGacha('multi', 'diamond')} className="px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 shadow-md transition-colors">10 Pulls (900💎)</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || gold < 500} onClick={() => handleGacha('single', 'gold')} className="px-4 py-3 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 disabled:bg-gray-400 shadow-md transition-colors">{t('singlePull')} (500G)</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || gold < 4500} onClick={() => handleGacha('multi', 'gold')} className="px-4 py-3 bg-yellow-600 text-white rounded-lg font-bold hover:bg-yellow-700 disabled:bg-gray-400 shadow-md transition-colors">{t('multiPull')} (4500G)</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || diamonds < 100} onClick={() => handleGacha('single', 'diamond')} className="px-4 py-3 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 disabled:bg-gray-400 shadow-md transition-colors">{t('singlePull')} (100💎)</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || diamonds < 900} onClick={() => handleGacha('multi', 'diamond')} className="px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 shadow-md transition-colors">{t('multiPull')} (900💎)</motion.button>
         </div>
         <div className="text-center text-md text-gray-600 min-h-[24px]">
           <AnimatePresence mode="wait">
@@ -91,8 +93,8 @@ const ShopPage: React.FC = () => {
               exit={{ y: -10, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {tab === 'plant' && 'Get random seeds with various rarity!'}
-              {tab === 'animal' && 'Get random animals with various rarity!'}
+              {tab === 'plant' && t('plantGachaDescription')}
+              {tab === 'animal' && t('animalGachaDescription')}
             </motion.p>
           </AnimatePresence>
         </div>
@@ -113,7 +115,7 @@ const ShopPage: React.FC = () => {
               exit={{ scale: 0.7, opacity: 0 }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             >
-              <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Gacha Results!</h2>
+              <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">{t('gachaResults')}</h2>
               <motion.div 
                 className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6"
                 variants={{

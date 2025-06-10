@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import store from './store';
 import App from './App';
 import './index.css';
+import './i18n';
 
 // Simple Error Boundary for production
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {

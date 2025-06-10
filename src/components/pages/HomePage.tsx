@@ -6,15 +6,16 @@ import {
   resetTimer,
   resetAccumulatedFocusTime,
   setMode,
-
   updateDurations,
   TimerMode,
 } from "@/store/slices/timerSlice";
 import { completePomodoro } from "@/store/slices/userSlice";
 import { formatTime } from "@/utils/formatTime";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 const HomePage: React.FC = () => {
+  const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const {
     isRunning,
@@ -31,9 +32,9 @@ const HomePage: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const timerModes: { id: TimerMode; label: string; color: string }[] = [
-    { id: "focus", label: "Focus", color: "bg-rose-500" },
-    { id: "shortBreak", label: "Short Break", color: "bg-cyan-500" },
-    { id: "longBreak", label: "Long Break", color: "bg-indigo-500" },
+    { id: "focus", label: t("focus"), color: "bg-rose-500" },
+    { id: "shortBreak", label: t("shortBreak"), color: "bg-cyan-500" },
+    { id: "longBreak", label: t("longBreak"), color: "bg-indigo-500" },
   ];
 
   const activeMode = timerModes.find((m) => m.id === mode) || timerModes[0];
@@ -68,7 +69,7 @@ const HomePage: React.FC = () => {
   const handleReset = () => dispatch(resetTimer());
 
   const handleResetAccumulatedTime = () => {
-    if (window.confirm('Are you sure you want to reset your accumulated focus time?')) {
+    if (window.confirm(t("confirmReset"))) {
       dispatch(resetAccumulatedFocusTime());
     }
   };
@@ -124,7 +125,10 @@ const HomePage: React.FC = () => {
           ))}
         </div>
 
-        <motion.div className="relative w-60 h-60 sm:w-72 sm:h-72 mx-auto mb-8" initial={false}>
+        <motion.div
+          className="relative w-60 h-60 sm:w-72 sm:h-72 mx-auto mb-8"
+          initial={false}
+        >
           <svg
             className="absolute inset-0"
             width="100%"
@@ -199,7 +203,7 @@ const HomePage: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             className="px-12 py-4 bg-white text-rose-500 rounded-full font-bold text-xl shadow-lg"
           >
-            {isRunning ? "Pause" : "Start"}
+            {isRunning ? t("pause") : t("start")}
           </motion.button>
           <motion.button
             onClick={handleReset}
@@ -207,26 +211,40 @@ const HomePage: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             className="w-16 h-16 bg-white/20 text-white rounded-full font-bold text-md shadow-lg flex items-center justify-center"
           >
-            Reset
+            {t("reset")}
           </motion.button>
         </div>
       </motion.div>
 
       <div className="w-full max-w-md mt-8 text-center">
         <div className="bg-white rounded-2xl shadow-xl p-6">
-          <p className="text-lg text-gray-800">Total Focus Time: {Math.floor((accumulatedFocusTime || 0) / 3600)}h {Math.floor(((accumulatedFocusTime || 0) % 3600) / 60)}m {((accumulatedFocusTime || 0) % 60)}s</p>
-          <button onClick={handleResetAccumulatedTime} className="text-sm text-gray-500 hover:text-gray-700 underline mt-2">Reset</button>
+          <p className="text-lg text-gray-800">
+            {t("totalFocusTime")}:{" "}
+            {Math.floor((accumulatedFocusTime || 0) / 3600)}h{" "}
+            {Math.floor(((accumulatedFocusTime || 0) % 3600) / 60)}m{" "}
+            {(accumulatedFocusTime || 0) % 60}s
+          </p>
+          <button
+            onClick={handleResetAccumulatedTime}
+            className="text-sm text-gray-500 hover:text-gray-700 underline mt-2"
+          >
+            {t("resetAccumulatedTime")}
+          </button>
         </div>
       </div>
 
       <div className="w-full max-w-md mt-8 bg-white rounded-2xl shadow-xl p-6">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">Statistics</h2>
+        <h2 className="text-xl font-bold mb-4 text-gray-800">
+          {t("statistics")}
+        </h2>
         <div className="space-y-4">
           <div>
             <div className="flex justify-between items-center mb-1">
-              <h3 className="font-bold text-gray-700">Level {level}</h3>
+              <h3 className="font-bold text-gray-700">
+                {t("level")} {level}
+              </h3>
               <p className="text-sm font-semibold text-gray-600">
-                {experience} / {expNeededForNextLevel} EXP
+                {experience} / {expNeededForNextLevel} {t("exp")}
               </p>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -239,7 +257,9 @@ const HomePage: React.FC = () => {
             </div>
           </div>
           <div className="text-center bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-bold text-gray-700">Completed Pomodoros</h3>
+            <h3 className="font-bold text-gray-700">
+              {t("completedPomodoros")}
+            </h3>
             <p className="text-3xl font-bold text-green-500">
               {completedPomodoros}
             </p>

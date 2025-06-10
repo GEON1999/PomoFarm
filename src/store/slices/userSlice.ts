@@ -175,6 +175,7 @@ const userSlice = createSlice({
         }
       }
     },
+    resetUser: () => initialState,
   },
 });
 
@@ -223,6 +224,7 @@ export const {
   completePomodoro,
   addToInventory,
   removeFromInventory,
+  resetUser,
 } = userSlice.actions;
 
 export default userSlice.reducer;
