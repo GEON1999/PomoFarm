@@ -1,4 +1,4 @@
-import { motion, Variants } from 'framer-motion';
+import { Variants } from 'framer-motion';
 
 /**
  * Fade in animation variants

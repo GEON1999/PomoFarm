@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { notificationService } from './notifications';
+import notificationService from './notifications';
 import { soundManager } from './soundManager';
 
 // Achievement categories
@@ -350,7 +350,7 @@ class AchievementManager {
    */
   private showAchievementUnlocked(achievement: Achievement): void {
     // Play sound
-    soundManager.play('notification');
+    soundManager.playSound('notification');
     
     // Show notification
     notificationService.add(

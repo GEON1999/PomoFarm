@@ -1,13 +1,12 @@
-import { ThunkAction } from '@reduxjs/toolkit';
+import { ThunkAction, AnyAction } from '@reduxjs/toolkit';
 import { RootState } from './index';
-import { UnknownAsyncThunkAction } from '@reduxjs/toolkit/dist/matchers';
 
 // Define the AppThunk type for our thunks
 export type AppThunk<ReturnType = void> = ThunkAction<
   ReturnType,
   RootState,
   unknown,
-  UnknownAsyncThunkAction
+  AnyAction
 >;
 
 // This type can be used to type the 'dispatch' function in your components

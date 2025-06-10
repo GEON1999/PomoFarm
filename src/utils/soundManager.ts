@@ -1,5 +1,5 @@
 import { Howl, Howler } from 'howler';
-import { notificationService } from './notifications';
+import notificationService from './notifications';
 
 // Sound effect paths
 const SOUND_PATHS = {
@@ -61,7 +61,7 @@ class SoundManager {
   };
   private isInitialized = false;
   private isMuted = false;
-  private audioContext: AudioContext | null = null;
+
 
   private constructor() {
     // Private constructor to enforce singleton
@@ -87,8 +87,7 @@ class SoundManager {
     this.options = { ...this.options, ...options };
 
     try {
-      // Initialize Web Audio API
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
       
       // Set Howler volume
       Howler.volume(this.options.soundVolume);
@@ -102,10 +101,10 @@ class SoundManager {
       ]);
       
       this.isInitialized = true;
-      notificationService.info('Audio system initialized');
+      notificationService.add('Audio system initialized', { type: 'info' });
     } catch (error) {
       console.error('Failed to initialize audio:', error);
-      notificationService.error('Failed to initialize audio system');
+      notificationService.add('Failed to initialize audio system', { type: 'error' });
     }
   }
 
@@ -154,39 +153,35 @@ class SoundManager {
   /**
    * Play a sound effect
    */
-  public play(key: SoundKey, options: {
-    volume?: number;
-    loop?: boolean;
-    onEnd?: () => void;
-  } = {}): number | null {
-    if (!this.options.soundEnabled || this.isMuted) return null;
-    
-    const sound = this.sounds[key];
-    if (!sound) {
-      console.warn(`Sound not loaded: ${key}`);
-      return null;
-    }
+  public playSound(key: SoundKey, sprite?: string): void {
+    if (!this.options.soundEnabled || this.isMuted) return;
 
-    try {
-      const soundId = sound.play();
+    const sound = this.sounds[key];
+    if (sound && typeof sound.play === 'function') {
+      sound.play(sprite);
+    } else {
+      // Lazy load and play if not preloaded
+      this.loadSounds([key]).then(() => {
+        const newSound = this.sounds[key];
+        if (newSound && typeof newSound.play === 'function') {
+          newSound.play(sprite);
+        }
+      });
+    }
+  }
+
+  /**
+   * Stop a specific sound
+   */
+  public stop(key: SoundKey): void {
+    const sound = this.sounds[key];
+    if (sound && typeof sound.stop === 'function') {
+      sound.stop();
       
-      // Apply options
-      if (options.volume !== undefined) {
-        sound.volume(options.volume, soundId);
+      if (this.currentMusicKey === key) {
+        this.currentMusic = null;
+        this.currentMusicKey = null;
       }
-      
-      if (options.loop) {
-        sound.loop(true, soundId);
-      }
-      
-      if (options.onEnd) {
-        sound.once('end', options.onEnd, soundId);
-      }
-      
-      return soundId;
-    } catch (error) {
-      console.error(`Error playing sound ${key}:`, error);
-      return null;
     }
   }
 
@@ -234,20 +229,27 @@ class SoundManager {
     
     // Play the new music
     const music = this.sounds[key];
-    this.currentMusic = music;
-    this.currentMusicKey = key;
-    
-    const volume = options.volume ?? this.options.musicVolume;
-    
-    if (options.fadeIn) {
-      music.volume(0).play();
-      music.fade(0, volume, options.fadeIn);
+    if (music && typeof music.play === 'function') {
+      this.currentMusic = music;
+      this.currentMusicKey = key;
+
+      const volume = options.volume ?? this.options.musicVolume;
+
+      if (options.fadeIn) {
+        music.volume(0);
+        music.play();
+        music.fade(0, volume, options.fadeIn);
+      } else {
+        music.volume(volume);
+        music.play();
+      }
+
+      if (options.loop !== false && typeof music.loop === 'function') {
+        music.loop(true);
+      }
     } else {
-      music.volume(volume).play();
-    }
-    
-    if (options.loop !== false) {
-      music.loop(true);
+      // Lazy load music
+      this.loadSound(key).then(() => this.playMusic(key, options));
     }
   }
 
@@ -261,19 +263,6 @@ class SoundManager {
   }
 
   /**
-   * Stop a specific sound
-   */
-  public stop(key: SoundKey): void {
-    const sound = this.sounds[key];
-    if (sound) {
-      sound.stop();
-      
-      if (this.currentMusicKey === key) {
-        this.currentMusic = null;
-        this.currentMusicKey = null;
-      }
-    }
-  }
 
   /**
    * Set the master volume for sound effects

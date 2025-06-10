@@ -1,4 +1,5 @@
 import { FarmPlot, Animal, InventoryItem } from '@/store/slices/farmSlice';
+import { CROP_DEFINITIONS } from '@/constants/farm';
 
 /**
  * Calculates the growth progress of a crop based on the time passed
@@ -10,15 +11,19 @@ export const calculateGrowthProgress = (
   plot: FarmPlot,
   currentTime: number
 ): number => {
-  if (!plot.plantedAt || plot.growthProgress >= 100) {
+  if (!plot.plantedAt || !plot.cropId || plot.growthProgress >= 100) {
     return plot.growthProgress || 0;
   }
 
-  const growthRate = plot.isWatered ? 1.5 : 1; // 1.5x faster when watered
+  const cropData = CROP_DEFINITIONS[plot.cropId];
+  if (!cropData) {
+    return plot.growthProgress;
+  }
+
   const timeElapsed = (currentTime - plot.plantedAt) / 1000; // Convert to seconds
-  const growthPerSecond = 100 / (plot.growthTime || 300); // Default 5 minutes to grow
+  const growthPerSecond = 100 / (cropData.growthTime || 300);
   
-  const progress = plot.growthProgress + (timeElapsed * growthPerSecond * growthRate);
+  const progress = plot.growthProgress + (timeElapsed * growthPerSecond);
   return Math.min(100, Math.max(0, progress));
 };
 
@@ -47,19 +52,12 @@ export const calculateAnimalHappiness = (
  * @param currentTime - Current timestamp in milliseconds
  * @returns Boolean indicating if the animal can produce an item
  */
-export const canProduceItem = (
-  animal: Animal,
-  currentTime: number
-): boolean => {
+export const canProduceItem = (animal: Animal): boolean => {
   if (animal.happiness < 50) return false; // Too unhappy to produce
   
-  const hoursSinceLastProduced = animal.lastProduced 
-    ? (currentTime - animal.lastProduced) / (1000 * 60 * 60)
-    : Infinity;
-    
-  const productionInterval = 2; // Hours between productions
-  
-  return hoursSinceLastProduced >= productionInterval;
+  // The actual production logic is in the farmSlice reducer.
+  // This function just checks if a product is not already ready for collection.
+  return animal.productReadyAt === null;
 };
 
 /**

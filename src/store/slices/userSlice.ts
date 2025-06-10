@@ -3,7 +3,14 @@ import type { RootState } from "../index";
 
 interface UserSettings {
   soundEnabled: boolean;
+  musicEnabled: boolean;
+  soundVolume: number;
+  musicVolume: number;
   notificationsEnabled: boolean;
+  timerAlertsEnabled: boolean;
+  focusDuration: number;
+  shortBreakDuration: number;
+  longBreakDuration: number;
   theme: "light" | "dark" | "system";
   language: string;
 }
@@ -43,7 +50,14 @@ const initialState: UserState = {
   inventory: [],
   settings: {
     soundEnabled: true,
+    musicEnabled: true,
+    soundVolume: 0.5,
+    musicVolume: 0.5,
     notificationsEnabled: true,
+    timerAlertsEnabled: true,
+    focusDuration: 25,
+    shortBreakDuration: 5,
+    longBreakDuration: 15,
     theme: "system",
     language: "en",
   },

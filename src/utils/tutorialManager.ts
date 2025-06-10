@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { notificationService } from './notifications';
+import notificationService from './notifications';
 import { soundManager } from './soundManager';
 
 // Tutorial step interface
@@ -355,8 +355,8 @@ class TutorialManager {
     this.completedTutorials.add(this.activeTutorial);
 
     // Show completion notification
-    notificationService.success(`Tutorial Complete: ${tutorial.name}`, 3000);
-    soundManager.play('success');
+    notificationService.add(`Tutorial Complete: ${tutorial.name}`, { type: 'success', duration: 3000 });
+    soundManager.playSound('success');
 
     // Notify listeners
     this.notifyListeners('complete', tutorial);
@@ -447,7 +447,7 @@ class TutorialManager {
     }
 
     // Play a sound
-    soundManager.play('notification');
+    soundManager.playSound('notification');
 
     // Notify listeners
     this.notifyListeners('step', tutorial, step);

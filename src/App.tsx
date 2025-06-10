@@ -21,7 +21,7 @@ const App: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
   const { isRunning } = useAppSelector((state) => state.timer);
-  const { lastUpdated } = useAppSelector((state) => state.farm);
+
   const { lastLogin } = useAppSelector((state) => state.user);
   const { lastRefresh } = useAppSelector((state) => state.shop);
 
