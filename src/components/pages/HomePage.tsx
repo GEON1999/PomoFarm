@@ -122,7 +122,7 @@ const HomePage: React.FC = () => {
           ))}
         </div>
 
-        <motion.div className="relative w-72 h-72 mx-auto mb-8" initial={false}>
+        <motion.div className="relative w-60 h-60 sm:w-72 sm:h-72 mx-auto mb-8" initial={false}>
           <svg
             className="absolute inset-0"
             width="100%"
@@ -159,7 +159,7 @@ const HomePage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.2 }}
-                className="text-6xl font-bold text-white tracking-tighter"
+                className="text-5xl sm:text-6xl font-bold text-white tracking-tighter"
               >
                 {formatTime(timeLeft)}
               </motion.div>
