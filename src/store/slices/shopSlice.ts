@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState, AppDispatch } from '@/store';
-import { spendDiamonds } from './userSlice';
+import { spendDiamonds, spendGold } from './userSlice';
 import { buyItem } from './farmSlice';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
@@ -13,6 +13,7 @@ export interface ShopItem {
   type: 'seed' | 'animal' | 'decoration' | 'booster';
   rarity: Rarity;
   image: string;
+  emoji?: string;
   quantity?: number;
   effect?: {
     type: string;
@@ -40,6 +41,7 @@ const initialItems: ShopItem[] = [
     type: 'seed',
     rarity: 'common',
     image: 'carrot_seeds.png',
+    emoji: '🥕',
   },
   {
     id: 'tomato_seed',
@@ -49,6 +51,7 @@ const initialItems: ShopItem[] = [
     type: 'seed',
     rarity: 'common',
     image: 'tomato_seeds.png',
+    emoji: '🍅',
   },
   {
     id: 'pumpkin_seed',
@@ -58,6 +61,7 @@ const initialItems: ShopItem[] = [
     type: 'seed',
     rarity: 'uncommon',
     image: 'pumpkin_seeds.png',
+    emoji: '🎃',
   },
   
   // Animals
@@ -69,6 +73,7 @@ const initialItems: ShopItem[] = [
     type: 'animal',
     rarity: 'uncommon',
     image: 'chicken.png',
+    emoji: '🐔',
   },
   {
     id: 'cow',
@@ -78,6 +83,7 @@ const initialItems: ShopItem[] = [
     type: 'animal',
     rarity: 'rare',
     image: 'cow.png',
+    emoji: '🐮',
   },
   
   // Boosters
@@ -89,6 +95,7 @@ const initialItems: ShopItem[] = [
     type: 'booster',
     rarity: 'rare',
     image: 'growth_booster.png',
+    emoji: '✨',
     effect: {
       type: 'growthSpeed',
       value: 2,
@@ -103,6 +110,7 @@ const initialItems: ShopItem[] = [
     type: 'booster',
     rarity: 'epic',
     image: 'lucky_charm.png',
+    emoji: '🍀',
     effect: {
       type: 'luckBoost',
       value: 20,
@@ -196,125 +204,81 @@ export const purchaseItem = (itemId: string, quantity: number = 1) =>
 // Gacha function
 // AppThunk 타입 명확화 (비동기 Thunk)
 // 가챠 카테고리별 뽑기 (씨앗/동물 pool 분리)
-export const pullGacha = (category: 'plant' | 'animal' | 'crop' | 'animal_product', gachaType: 'single' | 'multi' = 'single') =>
+export const pullGacha = (payload: { category: 'plant' | 'animal', gachaType: 'single' | 'multi', currency: 'gold' | 'diamond' }) =>
   async (dispatch: AppDispatch, getState: () => RootState): Promise<ShopItem[]> => {
+    const { category, gachaType, currency } = payload;
     const state = getState();
     const pullCount = gachaType === 'single' ? 1 : 10;
-    let enoughResource = true;
-    let costLabel = '';
-    if (category === 'crop') {
-      // crop 가챠: 임의의 crop 5개 필요
-      const crops = Object.values(state.user.inventory).filter((item: any) => item.type === 'crop');
-      const totalCrops = crops.reduce((sum: number, item: any) => sum + item.quantity, 0);
-      if (totalCrops < 5 * pullCount) {
-        throw new Error('Not enough crops for gacha');
+
+    const costs = {
+      single: { diamond: 100, gold: 500 },
+      multi: { diamond: 900, gold: 4500 },
+    };
+
+    const cost = costs[gachaType][currency];
+
+    if (currency === 'diamond') {
+      if (state.user.diamonds < cost) {
+        console.error('Not enough diamonds');
+        return [];
       }
-      costLabel = `${5 * pullCount} crops`;
-    } else if (category === 'animal_product') {
-      // animal_product 가챠: 임의의 animal_product 3개 필요
-      const animalProds = Object.values(state.user.inventory).filter((item: any) => item.type === 'animal_product');
-      const totalProds = animalProds.reduce((sum: number, item: any) => sum + item.quantity, 0);
-      if (totalProds < 3 * pullCount) {
-        throw new Error('Not enough animal products for gacha');
+      dispatch(spendDiamonds(cost));
+    } else { // gold
+      if (state.user.gold < cost) {
+        console.error('Not enough gold');
+        return [];
       }
-      costLabel = `${3 * pullCount} animal products`;
-    } else {
-      // 다이아로 진행
-      const pullPrice = gachaType === 'single' ? 100 : 900;
-      if (state.user.diamonds < pullPrice) {
-        throw new Error('Not enough diamonds');
-      }
-      costLabel = `${pullPrice} diamonds`;
+      dispatch(spendGold(cost));
     }
-    
-    try {
-      // 자원 차감
-      if (category === 'crop') {
-        let left = 5 * pullCount;
-        for (const item of Object.values(state.user.inventory)) {
-          if (item.type === 'crop' && left > 0) {
-            const use = Math.min(item.quantity, left);
-            dispatch({type: 'user/removeFromInventory', payload: {itemId: item.id, quantity: use}});
-            left -= use;
-          }
-        }
-      } else if (category === 'animal_product') {
-        let left = 3 * pullCount;
-        for (const item of Object.values(state.user.inventory)) {
-          if (item.type === 'animal_product' && left > 0) {
-            const use = Math.min(item.quantity, left);
-            dispatch({type: 'user/removeFromInventory', payload: {itemId: item.id, quantity: use}});
-            left -= use;
-          }
-        }
+
+    // 뽑기 결과
+    const results: ShopItem[] = [];
+
+    for (let i = 0; i < pullCount; i++) {
+      // Simple gacha logic - in a real app, this would be more sophisticated
+      const roll = Math.random() * 100;
+      let rarity: Rarity = 'common';
+
+      if (roll > 95) rarity = 'legendary';
+      else if (roll > 85) rarity = 'epic';
+      else if (roll > 70) rarity = 'rare';
+      else if (roll > 40) rarity = 'uncommon';
+
+      // 카테고리별 뽑기 pool 분리
+      let gachaPool: ShopItem[];
+
+      if (category === 'plant') {
+        gachaPool = state.shop.items.filter(item => item.type === 'seed');
+      } else if (category === 'animal') {
+        gachaPool = state.shop.items.filter(item => item.type === 'animal');
       } else {
-        const pullPrice = gachaType === 'single' ? 100 : 900;
-        dispatch(spendDiamonds(pullPrice));
+        gachaPool = state.shop.items;
       }
-      
-      // 뽑기 결과
-      const results: ShopItem[] = [];
-      
-      for (let i = 0; i < pullCount; i++) {
-        // Simple gacha logic - in a real app, this would be more sophisticated
-        const roll = Math.random() * 100;
-        let rarity: Rarity = 'common';
-        
-        if (roll > 95) rarity = 'legendary';
-        else if (roll > 85) rarity = 'epic';
-        else if (roll > 70) rarity = 'rare';
-        else if (roll > 40) rarity = 'uncommon';
-        
-        // 카테고리별 뽑기 pool 분리
-        let pool: ShopItem[] = [];
-        if (category === 'plant') {
-          pool = state.shop.items.filter((item: ShopItem) => item.type === 'seed');
-        } else if (category === 'animal') {
-          pool = state.shop.items.filter((item: ShopItem) => item.type === 'animal');
-        } else if (category === 'crop') {
-          pool = state.shop.items.filter((item: ShopItem) => item.type === 'crop');
-        } else if (category === 'animal_product') {
-          pool = state.shop.items.filter((item: ShopItem) => item.type === 'animal_product');
-        } else {
-          pool = state.shop.items;
-        }
-        
-        const eligibleItems = pool.filter((item: ShopItem) => item.rarity === rarity);
-        
-        if (eligibleItems.length > 0) {
-          const randomIndex = Math.floor(Math.random() * eligibleItems.length);
-          results.push(eligibleItems[randomIndex]);
-        } else {
-          // Fallback: 카테고리 pool에서 아무거나
-          const fallbackPool: ShopItem[] = state.shop.items.filter((item: ShopItem) => {
-             if (category === 'plant') return item.type === 'seed';
-             if (category === 'animal') return item.type === 'animal';
-             if (category === 'crop') return item.type === ('crop' as ShopItem['type']);
-             if (category === 'animal_product') return item.type === ('animal_product' as ShopItem['type']);
-             return false;
-           });
-          if (fallbackPool.length > 0) {
-            const fallbackIndex = Math.floor(Math.random() * fallbackPool.length);
-            results.push(fallbackPool[fallbackIndex]);
-          }
+
+      const eligibleItems = gachaPool.filter((item: ShopItem) => item.rarity === rarity);
+
+      if (eligibleItems.length > 0) {
+        const randomIndex = Math.floor(Math.random() * eligibleItems.length);
+        results.push(eligibleItems[randomIndex]);
+      } else {
+        // Fallback: 카테고리 pool에서 아무거나
+        if (gachaPool.length > 0) {
+          const fallbackIndex = Math.floor(Math.random() * gachaPool.length);
+          results.push(gachaPool[fallbackIndex]);
         }
       }
-      
-      // Add pulled items to farm inventory/animals
-      // 뽑은 아이템을 농장 인벤토리/동물에 반영
-      results.forEach((item: ShopItem) => {
-        if (item.type === 'seed' || item.type === 'animal') {
-          dispatch(buyItem({ itemId: item.id, quantity: 1, skipGoldCheck: true }));
-        }
-      });
-      // 디버깅용 로그
-      console.log('Gacha results:', results);
-      
-      return results;
-    } catch (error) {
-      console.error('Gacha pull failed:', error);
-      throw error;
     }
+
+    // 아이템 지급
+    results.forEach(item => {
+      if (item.type === 'animal' || item.type === 'seed') {
+        dispatch(buyItem({ itemId: item.id, quantity: 1 }));
+      } else {
+        // Handle other item types like decorations or boosters if needed
+      }
+    });
+
+    return results;
   };
 
 export const { addItem, updateItem, removeItem, refreshShop } = shopSlice.actions;

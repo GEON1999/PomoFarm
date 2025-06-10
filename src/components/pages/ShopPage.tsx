@@ -1,109 +1,167 @@
 import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { pullGacha } from '@/store/slices/shopSlice';
-import { buyItem } from '@/store/slices/farmSlice';
+import { pullGacha, ShopItem } from '@/store/slices/shopSlice';
 import { showNotification } from '@/store/slices/notificationSlice';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ShopPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const diamonds = useAppSelector(state => state.user.diamonds);
-  const inventory = useAppSelector(state => state.user.inventory);
-
-  // crop/animal_product 가챠 자원 계산
-  const cropCount = inventory.filter(item => item.type === 'crop').reduce((sum, item) => sum + item.quantity, 0);
-  const animalProductCount = inventory.filter(item => item.type === 'animal_product').reduce((sum, item) => sum + item.quantity, 0);
-  const [tab, setTab] = useState<'plant' | 'animal' | 'crop' | 'animal_product'>('plant');
+  const gold = useAppSelector(state => state.user.gold);
+  const [tab, setTab] = useState<'plant' | 'animal'>('plant');
   const [isPulling, setIsPulling] = useState(false);
-  const [gachaResult, setGachaResult] = useState<any[]>([]);
+  const [gachaResult, setGachaResult] = useState<ShopItem[]>([]);
   const [showResult, setShowResult] = useState(false);
 
   // 가챠 실행 핸들러
-  const handleGacha = async (type: 'single' | 'multi') => {
+  const handleGacha = async (type: 'single' | 'multi', currency: 'gold' | 'diamond') => {
     setIsPulling(true);
+    setGachaResult([]); // 이전 결과 초기화
     try {
-      // 실제 가챠 pull
-      // unwrap() 대신 thunk 결과를 직접 await (thunk는 createAsyncThunk가 아님)
-      const results = await dispatch<any>(pullGacha(tab, type));
-      setGachaResult(results);
-      setShowResult(true);
-      // 뽑은 아이템을 농장 인벤토리/동물에 반영
-      results.forEach((item: any) => {
-        dispatch(buyItem({ itemId: item.id, quantity: 1 }));
-      });
-      dispatch(showNotification({ message: `You got ${results.length} item(s)!`, type: 'success' }));
+      const results = await dispatch(pullGacha({ category: tab, gachaType: type, currency }));
+
+      if (results && results.length > 0) {
+        setGachaResult(results);
+        setShowResult(true);
+        dispatch(showNotification({ message: `You got ${results.length} item(s)!`, type: 'success' }));
+      } else {
+        dispatch(showNotification({ message: 'Gacha pull failed. Not enough funds or no items available.', type: 'error' }));
+      }
     } catch (e: any) {
-      dispatch(showNotification({ message: e.message || 'Not enough diamonds!', type: 'error' }));
+      dispatch(showNotification({ message: e.message || 'An unexpected error occurred.', type: 'error' }));
     } finally {
       setIsPulling(false);
     }
   };
 
+  const getRarityColor = (rarity?: string) => {
+    switch (rarity) {
+      case 'uncommon':
+        return 'border-green-500';
+      case 'rare':
+        return 'border-blue-500';
+      case 'epic':
+        return 'border-purple-500';
+      case 'legendary':
+        return 'border-yellow-500';
+      default:
+        return 'border-gray-300';
+    }
+  };
+
   return (
-    <div className="p-4 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Shop Gacha</h1>
-      <div className="mb-4 flex gap-4">
-        <button onClick={() => setTab('plant')} className={`px-4 py-2 rounded-md font-semibold ${tab === 'plant' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>Plant Gacha</button>
-        <button onClick={() => setTab('animal')} className={`px-4 py-2 rounded-md font-semibold ${tab === 'animal' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>Animal Gacha</button>
-        <button onClick={() => setTab('crop')} className={`px-4 py-2 rounded-md font-semibold ${tab === 'crop' ? 'bg-orange-500 text-white' : 'bg-gray-200'}`}>Crop Gacha</button>
-        <button onClick={() => setTab('animal_product')} className={`px-4 py-2 rounded-md font-semibold ${tab === 'animal_product' ? 'bg-yellow-700 text-white' : 'bg-gray-200'}`}>Animal Product Gacha</button>
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto font-sans">
+      <motion.h1 
+        className="text-4xl font-bold mb-8 text-center text-stone-800"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        Gacha Shop
+      </motion.h1>
+
+      <div className="mb-6 flex justify-center gap-4">
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTab('plant')} className={`px-6 py-3 rounded-full font-semibold text-lg transition-colors ${tab === 'plant' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white text-emerald-700 shadow-md'}`}>🌱 Plant Gacha</motion.button>
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTab('animal')} className={`px-6 py-3 rounded-full font-semibold text-lg transition-colors ${tab === 'animal' ? 'bg-sky-600 text-white shadow-lg' : 'bg-white text-sky-700 shadow-md'}`}>🐾 Animal Gacha</motion.button>
       </div>
-      <div className="bg-white p-6 rounded-lg shadow-md flex flex-col items-center">
-        {tab === 'crop' ? (
-          <div className="mb-4 text-lg font-semibold">Crops: <span className="text-orange-500">{cropCount}</span></div>
-        ) : tab === 'animal_product' ? (
-          <div className="mb-4 text-lg font-semibold">Animal Products: <span className="text-yellow-700">{animalProductCount}</span></div>
-        ) : (
-          <div className="mb-4 text-lg font-semibold">Diamonds: <span className="text-blue-500">{diamonds}</span></div>
-        )}
-        <div className="flex gap-4 mb-4">
-          {tab === 'crop' ? (
-            <>
-              <button disabled={isPulling || cropCount < 5} onClick={() => handleGacha('single')} className="px-6 py-2 bg-orange-500 text-white rounded-md font-bold hover:bg-orange-600 disabled:bg-gray-300">Single Pull (5 Crops)</button>
-              <button disabled={isPulling || cropCount < 50} onClick={() => handleGacha('multi')} className="px-6 py-2 bg-orange-600 text-white rounded-md font-bold hover:bg-orange-700 disabled:bg-gray-300">10 Pulls (50 Crops)</button>
-            </>
-          ) : tab === 'animal_product' ? (
-            <>
-              <button disabled={isPulling || animalProductCount < 3} onClick={() => handleGacha('single')} className="px-6 py-2 bg-yellow-700 text-white rounded-md font-bold hover:bg-yellow-800 disabled:bg-gray-300">Single Pull (3 Animal Products)</button>
-              <button disabled={isPulling || animalProductCount < 30} onClick={() => handleGacha('multi')} className="px-6 py-2 bg-yellow-800 text-white rounded-md font-bold hover:bg-yellow-900 disabled:bg-gray-300">10 Pulls (30 Animal Products)</button>
-            </>
-          ) : (
-            <>
-              <button disabled={isPulling || diamonds < 100} onClick={() => handleGacha('single')} className="px-6 py-2 bg-purple-500 text-white rounded-md font-bold hover:bg-purple-600 disabled:bg-gray-300">Single Pull (100💎)</button>
-              <button disabled={isPulling || diamonds < 900} onClick={() => handleGacha('multi')} className="px-6 py-2 bg-yellow-500 text-white rounded-md font-bold hover:bg-yellow-600 disabled:bg-gray-300">10 Pulls (900💎)</button>
-            </>
-          )}
+      
+      <motion.div 
+        key={tab}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-white/50 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-200"
+      >
+        <div className="flex items-center justify-center gap-6 mb-6 text-xl font-semibold text-stone-700">
+          <span className="flex items-center gap-2">💎 <span className="text-blue-500">{diamonds}</span></span>
+          <span className="flex items-center gap-2">💰 <span className="text-yellow-600">{gold}</span></span>
         </div>
-        <div className="text-sm text-gray-500 mb-2">
-          {tab === 'plant' && 'Get random seeds with various rarity!'}
-          {tab === 'animal' && 'Get random animals with various rarity!'}
-          {tab === 'crop' && 'Use crops to pull random rewards! (5 crops per pull)'}
-          {tab === 'animal_product' && 'Use animal products to pull random rewards! (3 animal products per pull)'}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || gold < 500} onClick={() => handleGacha('single', 'gold')} className="px-4 py-3 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 disabled:bg-gray-400 shadow-md transition-colors">Single Pull (500G)</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || gold < 4500} onClick={() => handleGacha('multi', 'gold')} className="px-4 py-3 bg-yellow-600 text-white rounded-lg font-bold hover:bg-yellow-700 disabled:bg-gray-400 shadow-md transition-colors">10 Pulls (4500G)</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || diamonds < 100} onClick={() => handleGacha('single', 'diamond')} className="px-4 py-3 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 disabled:bg-gray-400 shadow-md transition-colors">Single Pull (100💎)</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} disabled={isPulling || diamonds < 900} onClick={() => handleGacha('multi', 'diamond')} className="px-4 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:bg-gray-400 shadow-md transition-colors">10 Pulls (900💎)</motion.button>
         </div>
-      </div>
-      {/* 결과 모달 */}
-      {showResult && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative">
-            <h2 className="text-xl font-bold mb-4 text-center">Gacha Result</h2>
-            {tab === 'crop' && cropCount < 5 && (
-          <div className="text-red-500 mb-2 text-center">Not enough crops for gacha.</div>
-        )}
-        {tab === 'animal_product' && animalProductCount < 3 && (
-          <div className="text-red-500 mb-2 text-center">Not enough animal products for gacha.</div>
-        )}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-              {gachaResult.map((item, idx) => (
-                <div key={idx} className="flex flex-col items-center p-2 border rounded-md bg-gray-50">
-                  <div className="text-3xl mb-1">{item.emoji || '🎁'}</div>
-                  <div className="font-semibold">{item.name}</div>
-                  <div className="text-xs text-gray-500">{item.rarity?.toUpperCase() || ''}</div>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => setShowResult(false)} className="block mx-auto px-4 py-2 bg-green-500 text-white rounded-md font-bold">Close</button>
-          </div>
+        <div className="text-center text-md text-gray-600 min-h-[24px]">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={tab}
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -10, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              {tab === 'plant' && 'Get random seeds with various rarity!'}
+              {tab === 'animal' && 'Get random animals with various rarity!'}
+            </motion.p>
+          </AnimatePresence>
         </div>
-      )}
+      </motion.div>
+
+      <AnimatePresence>
+        {showResult && (
+          <motion.div 
+            className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative"
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.7, opacity: 0 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            >
+              <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Gacha Results!</h2>
+              <motion.div 
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-6"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: {
+                      staggerChildren: 0.1
+                    }
+                  }
+                }}
+                initial="hidden"
+                animate="show"
+              >
+                {gachaResult.map((item, idx) => (
+                  <motion.div 
+                    key={idx} 
+                    className={`flex flex-col items-center p-3 border-4 rounded-xl bg-white shadow-md ${getRarityColor(item.rarity)}`}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0 }
+                    }}
+                  >
+                    <motion.div 
+                      className="text-5xl mb-2 drop-shadow-lg"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.1 * idx + 0.3, type: 'spring', stiffness: 400, damping: 10 }}
+                    >
+                      {item.emoji || '🎁'}
+                    </motion.div>
+                    <div className="font-semibold text-center text-sm text-gray-800">{item.name}</div>
+                    <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">{item.rarity || 'common'}</div>
+                  </motion.div>
+                ))}
+              </motion.div>
+              <motion.button 
+                whileHover={{ scale: 1.05 }} 
+                whileTap={{ scale: 0.95 }} 
+                onClick={() => setShowResult(false)} 
+                className="block mx-auto px-8 py-3 bg-green-500 text-white rounded-full font-bold text-lg shadow-lg"
+              >
+                Close
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

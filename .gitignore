@@ -13,8 +13,6 @@ build/
 .env.example
 
 # 프로젝트 파일 제외
-package.json
-package-lock.json
 
 # windsurfrules
 .windsurfrules

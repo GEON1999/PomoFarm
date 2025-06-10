@@ -23,6 +23,7 @@ interface UserState {
   username: string;
   email: string;
   diamonds: number;
+  gold: number;
   experience: number;
   level: number;
   inventory: InventoryItem[];
@@ -36,6 +37,7 @@ const initialState: UserState = {
   username: "Farmer",
   email: "",
   diamonds: 4000,
+  gold: 1000,
   experience: 0,
   level: 1,
   inventory: [],
@@ -60,6 +62,16 @@ const userSlice = createSlice({
     spendDiamonds: (state, action: PayloadAction<number>) => {
       if (state.diamonds >= action.payload) {
         state.diamonds -= action.payload;
+      }
+    },
+
+    addGold: (state, action: PayloadAction<number>) => {
+      state.gold += action.payload;
+    },
+
+    spendGold: (state, action: PayloadAction<number>) => {
+      if (state.gold >= action.payload) {
+        state.gold -= action.payload;
       }
     },
 
@@ -189,6 +201,8 @@ export const removeFromInventoryWithCheck = createAsyncThunk(
 export const {
   addDiamonds,
   spendDiamonds,
+  addGold,
+  spendGold,
   addExperience,
   updateSettings,
   updateProfile,

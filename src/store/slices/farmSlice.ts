@@ -1,4 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { RootState, AppDispatch } from '@/store';
+import { addGold } from './userSlice';
 import { CROP_DEFINITIONS, ANIMAL_DEFINITIONS, SHOP_ITEMS, getCropBySeedId } from '@/constants/farm';
 
 // Interfaces
@@ -23,7 +25,6 @@ export interface InventoryItem {
 }
 
 interface FarmState {
-  gold: number;
   plots: FarmPlot[];
   animals: Animal[];
   inventory: Record<string, InventoryItem>; // Use a record for easier access
@@ -42,7 +43,6 @@ const initialPlots: FarmPlot[] = Array(9).fill(null).map((_, index) => ({
 
 // Initial State
 const initialState: FarmState = {
-  gold: 100,
   plots: initialPlots,
   animals: [],
   inventory: {
@@ -86,13 +86,10 @@ const farmSlice = createSlice({
       state.lastUpdated = now;
     },
 
-    buyItem: (state, action: PayloadAction<{ itemId: string; quantity: number; skipGoldCheck?: boolean }>) => {
-      const { itemId, quantity, skipGoldCheck } = action.payload;
+    buyItem: (state, action: PayloadAction<{ itemId: string; quantity: number }>) => {
+      const { itemId, quantity } = action.payload;
       const shopItem = SHOP_ITEMS[itemId];
       if (!shopItem) return;
-
-      const totalCost = shopItem.buyPrice * quantity;
-      if (!skipGoldCheck && state.gold < totalCost) return;
 
       if (shopItem.type === 'animal') {
         for (let i = 0; i < quantity; i++) {
@@ -113,34 +110,17 @@ const farmSlice = createSlice({
           state.inventory[itemId] = { itemId, quantity };
         }
       }
-      
-      if (!skipGoldCheck) {
-        state.gold -= totalCost;
-      }
     },
 
-    sellItem: (state, action: PayloadAction<{ itemId: string; quantity: number }>) => {
-        const { itemId, quantity } = action.payload;
-        const inventoryItem = state.inventory[itemId];
-        if (!inventoryItem || inventoryItem.quantity < quantity) return;
-
-        let sellPrice = 0;
-        const crop = Object.values(CROP_DEFINITIONS).find(c => c.id === itemId);
-        const animalProduct = Object.values(ANIMAL_DEFINITIONS).find(a => a.product.id === itemId);
-
-        if (crop) {
-            sellPrice = crop.sellPrice;
-        } else if (animalProduct) {
-            sellPrice = animalProduct.product.sellPrice;
+    _removeItemFromInventory: (state, action: PayloadAction<{ itemId: string; quantity: number }>) => {
+      const { itemId, quantity } = action.payload;
+      const inventoryItem = state.inventory[itemId];
+      if (inventoryItem && inventoryItem.quantity >= quantity) {
+        inventoryItem.quantity -= quantity;
+        if (inventoryItem.quantity <= 0) {
+          delete state.inventory[itemId];
         }
-
-        if(sellPrice > 0){
-            inventoryItem.quantity -= quantity;
-            if (inventoryItem.quantity <= 0) {
-                delete state.inventory[itemId];
-            }
-            state.gold += sellPrice * quantity;
-        }
+      }
     },
 
     plantCrop: (state, action: PayloadAction<{ plotId: string; seedId: string }>) => {
@@ -208,10 +188,44 @@ const farmSlice = createSlice({
 export const {
   updateFarmState,
   buyItem,
-  sellItem,
+  _removeItemFromInventory,
   plantCrop,
   harvestPlot,
   collectProduct,
 } = farmSlice.actions;
+
+export const sellItem = (payload: { itemId: string; quantity: number; }) => 
+  (dispatch: AppDispatch, getState: () => RootState) => {
+    const { itemId, quantity } = payload;
+    const state = getState();
+    const inventoryItem = state.farm.inventory[itemId];
+
+    if (!inventoryItem || inventoryItem.quantity < quantity) {
+      console.error('Not enough items to sell');
+      return;
+    }
+
+    // Assuming sell price is defined in the constants
+    const crop = CROP_DEFINITIONS[itemId];
+    const animalProduct = Object.values(ANIMAL_DEFINITIONS).find(def => def.product.id === itemId)?.product;
+    const shopItem = SHOP_ITEMS[itemId];
+
+    let sellPrice = 0;
+    if (crop?.sellPrice) {
+      sellPrice = crop.sellPrice;
+    } else if (animalProduct?.sellPrice) {
+      sellPrice = animalProduct.sellPrice;
+    } else if (shopItem) {
+      sellPrice = shopItem.buyPrice / 2; // Sell for half price
+    }
+
+    if (sellPrice > 0) {
+      const goldEarned = sellPrice * quantity;
+      dispatch(addGold(goldEarned));
+      dispatch(_removeItemFromInventory({ itemId, quantity }));
+    } else {
+      console.error(`Item ${itemId} cannot be sold.`);
+    }
+};
 
 export default farmSlice.reducer;

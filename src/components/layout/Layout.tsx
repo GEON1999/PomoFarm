@@ -1,86 +1,61 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector } from '@/store';
-import type { InventoryItem } from '@/store/slices/farmSlice';
+import { Link, useLocation } from 'react-router-dom';
+import Logo from '@/components/ui/Logo';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { diamonds, gold } = useAppSelector((state) => state.user);
   const location = useLocation();
-  const { diamonds } = useAppSelector((state) => state.user);
-  const { inventory } = useAppSelector((state) => state.farm);
 
-  // Calculate total crops and animal products from inventory
-  // inventory는 Record<string, InventoryItem>이므로 Object.values로 변환
-  const cropCount = Object.values(inventory)
-    .filter((item: InventoryItem) => item.itemId.endsWith('_seed'))
-    .reduce((sum: number, item: InventoryItem) => sum + item.quantity, 0);
-
-  // 동물 생산품(예: egg, milk 등) 카운트
-  const productCount = Object.values(inventory)
-    .filter((item: InventoryItem) => !item.itemId.endsWith('_seed'))
-    .reduce((sum: number, item: InventoryItem) => sum + item.quantity, 0);
-
-  // Navigation items
-  const navItems = [
-    { path: '/', icon: '🏠', label: 'Home' },
-    { path: '/farm', icon: '🌱', label: 'Farm' },
-    { path: '/shop', icon: '🛍️', label: 'Shop' },
+  const navLinks = [
+    { path: '/', label: 'Home' },
+    { path: '/farm', label: 'Farm' },
+    { path: '/shop', label: 'Shop' },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header */}
-      <header className="bg-green-600 text-white shadow-md">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">PomoFarm</h1>
-          
-          {/* Currency Display */}
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
-              <span className="text-yellow-300 mr-1">💎</span>
-              <span className="font-medium">{diamonds}</span>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex-shrink-0">
+              <Link to="/">
+                <Logo />
+              </Link>
             </div>
-            <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
-              <span className="text-green-300 mr-1">🌾</span>
-              <span className="font-medium">{cropCount}</span>
-            </div>
-            <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
-              <span className="text-orange-200 mr-1">🥚</span>
-              <span className="font-medium">{productCount}</span>
+            <nav className="hidden md:flex items-center space-x-8">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`text-lg font-medium transition-colors duration-200 ${ 
+                    location.pathname === link.path
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center bg-gray-200/50 dark:bg-gray-700/50 rounded-full px-3 py-1.5">
+                <span className="text-xl mr-2">💎</span>
+                <span className="font-bold text-lg text-gray-800 dark:text-white">{diamonds}</span>
+              </div>
+              <div className="flex items-center bg-gray-200/50 dark:bg-gray-700/50 rounded-full px-3 py-1.5">
+                <span className="text-xl mr-2">💰</span>
+                <span className="font-bold text-lg text-gray-800 dark:text-white">{gold}</span>
+              </div>
             </div>
           </div>
         </div>
       </header>
-
-      {/* Main Content */}
-      <main className="flex-grow container mx-auto px-4 py-6">
-        {children}
-      </main>
-
-      {/* Bottom Navigation */}
-      <nav className="bg-white border-t border-gray-200 shadow-lg">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-around">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center py-3 px-4 ${
-                  location.pathname === item.path
-                    ? 'text-green-600 border-t-2 border-green-600'
-                    : 'text-gray-600 hover:text-green-600'
-                }`}
-              >
-                <span className="text-2xl">{item.icon}</span>
-                <span className="text-xs mt-1">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </nav>
+      <main className="container mx-auto p-4 sm:p-6 lg:p-8">{children}</main>
     </div>
   );
 };
