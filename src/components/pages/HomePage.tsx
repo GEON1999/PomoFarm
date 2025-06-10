@@ -4,8 +4,9 @@ import {
   startTimer,
   pauseTimer,
   resetTimer,
+  resetAccumulatedFocusTime,
   setMode,
-  tick,
+
   updateDurations,
   TimerMode,
 } from "@/store/slices/timerSlice";
@@ -23,6 +24,7 @@ const HomePage: React.FC = () => {
     focusDuration,
     shortBreakDuration,
     longBreakDuration,
+    accumulatedFocusTime,
   } = useAppSelector((state) => state.timer);
   const { level, experience } = useAppSelector((state) => state.user);
 
@@ -47,12 +49,6 @@ const HomePage: React.FC = () => {
     expNeededForNextLevel > 0 ? (experience / expNeededForNextLevel) * 100 : 0;
 
   useEffect(() => {
-    if (!isRunning) return;
-    const interval = setInterval(() => dispatch(tick()), 1000);
-    return () => clearInterval(interval);
-  }, [isRunning, dispatch]);
-
-  useEffect(() => {
     if (timeLeft === 0 && totalDuration > 0) {
       audioRef.current
         ?.play()
@@ -70,6 +66,12 @@ const HomePage: React.FC = () => {
   };
 
   const handleReset = () => dispatch(resetTimer());
+
+  const handleResetAccumulatedTime = () => {
+    if (window.confirm('Are you sure you want to reset your accumulated focus time?')) {
+      dispatch(resetAccumulatedFocusTime());
+    }
+  };
 
   const changeMode = (newMode: TimerMode) => {
     if (isRunning) dispatch(pauseTimer());
@@ -190,7 +192,7 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        <div className="flex justify-center space-x-4">
+        <div className="flex justify-center space-x-4 mt-8">
           <motion.button
             onClick={toggleTimer}
             whileHover={{ scale: 1.05 }}
@@ -209,6 +211,13 @@ const HomePage: React.FC = () => {
           </motion.button>
         </div>
       </motion.div>
+
+      <div className="w-full max-w-md mt-8 text-center">
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <p className="text-lg text-gray-800">Total Focus Time: {Math.floor((accumulatedFocusTime || 0) / 3600)}h {Math.floor(((accumulatedFocusTime || 0) % 3600) / 60)}m {((accumulatedFocusTime || 0) % 60)}s</p>
+          <button onClick={handleResetAccumulatedTime} className="text-sm text-gray-500 hover:text-gray-700 underline mt-2">Reset</button>
+        </div>
+      </div>
 
       <div className="w-full max-w-md mt-8 bg-white rounded-2xl shadow-xl p-6">
         <h2 className="text-xl font-bold mb-4 text-gray-800">Statistics</h2>

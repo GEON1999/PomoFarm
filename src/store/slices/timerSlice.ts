@@ -10,16 +10,20 @@ interface TimerState {
   shortBreakDuration: number; // in minutes
   longBreakDuration: number; // in minutes
   completedPomodoros: number;
+  endTime: number | null; // Timestamp for when the timer should end
+  accumulatedFocusTime: number; // in seconds
 }
 
 const initialState: TimerState = {
   isRunning: false,
   mode: "focus",
-  timeLeft: 25 * 60, // 25 minutes in seconds
+  timeLeft: 25 * 60,
   focusDuration: 25,
   shortBreakDuration: 5,
   longBreakDuration: 15,
   completedPomodoros: 0,
+  endTime: null,
+  accumulatedFocusTime: 0,
 };
 
 const timerSlice = createSlice({
@@ -28,25 +32,28 @@ const timerSlice = createSlice({
   reducers: {
     startTimer: (state) => {
       state.isRunning = true;
+      state.endTime = Date.now() + state.timeLeft * 1000;
     },
     pauseTimer: (state) => {
       state.isRunning = false;
     },
     resetTimer: (state) => {
       state.isRunning = false;
-      state.timeLeft = state.focusDuration * 60;
       state.mode = "focus";
+      state.timeLeft = state.focusDuration * 60;
+      state.endTime = null;
     },
     tick: (state) => {
+      if (!state.isRunning) return;
+
       if (state.timeLeft > 0) {
         state.timeLeft -= 1;
       } else {
         state.isRunning = false;
+        state.endTime = null;
 
-        // Handle timer completion
         if (state.mode === "focus") {
           state.completedPomodoros += 1;
-          // After 4 pomodoros, take a long break, otherwise short break
           state.mode =
             state.completedPomodoros % 4 === 0 ? "longBreak" : "shortBreak";
           state.timeLeft =
@@ -54,7 +61,6 @@ const timerSlice = createSlice({
               ? state.longBreakDuration
               : state.shortBreakDuration) * 60;
         } else {
-          // Break is over, go back to focus
           state.mode = "focus";
           state.timeLeft = state.focusDuration * 60;
         }
@@ -63,8 +69,8 @@ const timerSlice = createSlice({
     setMode: (state, action: PayloadAction<TimerMode>) => {
       state.mode = action.payload;
       state.isRunning = false;
+      state.endTime = null;
 
-      // Reset timer based on the new mode
       switch (action.payload) {
         case "focus":
           state.timeLeft = state.focusDuration * 60;
@@ -87,26 +93,36 @@ const timerSlice = createSlice({
     ) => {
       const { focus, shortBreak, longBreak } = action.payload;
 
-      if (focus !== undefined) {
-        state.focusDuration = focus;
-        if (state.mode === "focus") {
-          state.timeLeft = focus * 60;
-        }
-      }
+      if (focus !== undefined) state.focusDuration = focus;
+      if (shortBreak !== undefined) state.shortBreakDuration = shortBreak;
+      if (longBreak !== undefined) state.longBreakDuration = longBreak;
 
-      if (shortBreak !== undefined) {
-        state.shortBreakDuration = shortBreak;
-        if (state.mode === "shortBreak") {
-          state.timeLeft = shortBreak * 60;
+      if (!state.isRunning) {
+        switch (state.mode) {
+          case "focus":
+            if (focus !== undefined) state.timeLeft = focus * 60;
+            break;
+          case "shortBreak":
+            if (shortBreak !== undefined) state.timeLeft = shortBreak * 60;
+            break;
+          case "longBreak":
+            if (longBreak !== undefined) state.timeLeft = longBreak * 60;
+            break;
         }
       }
-
-      if (longBreak !== undefined) {
-        state.longBreakDuration = longBreak;
-        if (state.mode === "longBreak") {
-          state.timeLeft = longBreak * 60;
-        }
+    },
+    syncTimer: (state) => {
+      if (state.isRunning && state.endTime) {
+        const now = Date.now();
+        const remainingTime = Math.round((state.endTime - now) / 1000);
+        state.timeLeft = Math.max(0, remainingTime);
       }
+    },
+    incrementAccumulatedFocusTime: (state) => {
+      state.accumulatedFocusTime += 1;
+    },
+    resetAccumulatedFocusTime: (state) => {
+      state.accumulatedFocusTime = 0;
     },
   },
 });
@@ -118,6 +134,9 @@ export const {
   tick,
   setMode,
   updateDurations,
+  syncTimer,
+  incrementAccumulatedFocusTime,
+  resetAccumulatedFocusTime,
 } = timerSlice.actions;
 
 export default timerSlice.reducer;

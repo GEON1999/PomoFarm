@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { updateFarmState } from '@/store/slices/farmSlice';
 import { refreshShop } from '@/store/slices/shopSlice';
+import { syncTimer, tick, incrementAccumulatedFocusTime } from '@/store/slices/timerSlice';
 
 // Layout Components
 import Layout from '@/components/layout/Layout';
@@ -20,10 +21,14 @@ import Notification from '@/components/common/Notification';
 const App: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const { isRunning } = useAppSelector((state) => state.timer);
+  const { isRunning, mode } = useAppSelector((state) => state.timer);
 
   const { lastLogin } = useAppSelector((state) => state.user);
   const { lastRefresh } = useAppSelector((state) => state.shop);
+
+  useEffect(() => {
+    dispatch(syncTimer());
+  }, [dispatch]);
 
   // Effect for the game loop (farm updates, timers, etc.)
   useEffect(() => {
@@ -31,6 +36,12 @@ const App: React.FC = () => {
     const gameLoop = setInterval(() => {
       // Update farm growth and animal states
       dispatch(updateFarmState());
+      if (isRunning) {
+        dispatch(tick());
+        if (mode === 'focus') {
+          dispatch(incrementAccumulatedFocusTime());
+        }
+      }
     }, 1000);
 
     // Clean up interval on unmount
