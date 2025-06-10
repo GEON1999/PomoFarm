@@ -33,8 +33,11 @@ const MinutePickerOrTimer: React.FC<{
       if (scrollRef.current) {
         const scrollTop = scrollRef.current.scrollTop;
         const selectedIndex = Math.round(scrollTop / itemHeight);
-        const finalValue = Math.max(minVal, Math.min(maxVal, selectedIndex + minVal));
-        
+        const finalValue = Math.max(
+          minVal,
+          Math.min(maxVal, selectedIndex + minVal)
+        );
+
         if (finalValue !== focusDuration) {
           onSelectMinute(finalValue);
         }
@@ -52,7 +55,7 @@ const MinutePickerOrTimer: React.FC<{
   }, []); // 최초 마운트 시에만 실행합니다.
 
   // focus 모드가 아니거나 타이머 실행 중일 때는 일반 타이머 표시
-  if (mode !== 'focus' || isRunning) {
+  if (mode !== "focus" || isRunning) {
     return (
       <div className="text-7xl font-light text-gray-800 select-none">
         {formatTime(timeLeft)}
@@ -60,7 +63,10 @@ const MinutePickerOrTimer: React.FC<{
     );
   }
 
-  const minutes = Array.from({ length: maxVal - minVal + 1 }, (_, i) => i + minVal);
+  const minutes = Array.from(
+    { length: maxVal - minVal + 1 },
+    (_, i) => i + minVal
+  );
 
   // 스크롤 피커 UI
   return (
@@ -69,8 +75,10 @@ const MinutePickerOrTimer: React.FC<{
       onScroll={handleScroll}
       className="h-64 w-64 overflow-y-scroll snap-y snap-mandatory scrollbar-hide relative"
       style={{
-        maskImage: 'linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)',
+        maskImage:
+          "linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)",
+        WebkitMaskImage:
+          "linear-gradient(to bottom, transparent, black 25%, black 75%, transparent)",
       }}
     >
       {/* 위아래 패딩: 첫번째와 마지막 아이템이 중앙에 올 수 있도록 함 */}
@@ -87,7 +95,7 @@ const MinutePickerOrTimer: React.FC<{
               transform: `scale(${minute === focusDuration ? 1 : 0.7})`,
             }}
           >
-            {String(minute).padStart(2, '0')}:00
+            {String(minute).padStart(2, "0")}:00
           </span>
         </div>
       ))}
@@ -207,8 +215,12 @@ const HomePage: React.FC = () => {
         </div>
 
         {/* Timer Circle (반응형 크기) */}
-        <div className="relative w-full max-w-[32rem] aspect-square mx-auto mb-12"> {/* 모바일 대응: w-full, max-w, aspect-square */}
-          <svg className="w-full h-auto" viewBox="0 0 200 200"> {/* viewBox 확장 */}
+        <div className="relative w-full max-w-[32rem] aspect-square mx-auto mb-12">
+          {" "}
+          {/* 모바일 대응: w-full, max-w, aspect-square */}
+          <svg className="w-full h-auto" viewBox="0 0 200 200">
+            {" "}
+            {/* viewBox 확장 */}
             {/* 배경 원 */}
             <circle
               cx="100"
@@ -237,9 +249,7 @@ const HomePage: React.FC = () => {
               })()}
               transform="rotate(-90 100 100)"
             />
-
           </svg>
-
           {/* Timer Display with scrollable minute picker */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <MinutePickerOrTimer

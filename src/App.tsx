@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { updateGrowth } from '@/store/slices/farmSlice';
-import { completePomodoro } from '@/store/slices/userSlice';
+import { updateFarmState } from '@/store/slices/farmSlice';
 import { refreshShop } from '@/store/slices/shopSlice';
 
 // Layout Components
@@ -31,19 +30,7 @@ const App: React.FC = () => {
     // Set up game loop (runs every second)
     const gameLoop = setInterval(() => {
       // Update farm growth and animal states
-      dispatch(updateGrowth());
-      
-      // Check for completed pomodoros
-      // This would be more sophisticated in a real implementation
-      if (isRunning) {
-        const now = Date.now();
-        const lastPomodoro = lastLogin || 0;
-        const pomodoroDuration = 25 * 60 * 1000; // 25 minutes in ms
-        
-        if (now - lastPomodoro >= pomodoroDuration) {
-          dispatch(completePomodoro()); // This is correct - Redux Toolkit actions don't need parameters
-        }
-      }
+      dispatch(updateFarmState());
     }, 1000);
 
     // Clean up interval on unmount

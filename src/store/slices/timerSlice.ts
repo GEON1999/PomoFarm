@@ -1,6 +1,6 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
+export type TimerMode = "focus" | "shortBreak" | "longBreak";
 
 interface TimerState {
   isRunning: boolean;
@@ -14,7 +14,7 @@ interface TimerState {
 
 const initialState: TimerState = {
   isRunning: false,
-  mode: 'focus',
+  mode: "focus",
   timeLeft: 25 * 60, // 25 minutes in seconds
   focusDuration: 25,
   shortBreakDuration: 5,
@@ -23,7 +23,7 @@ const initialState: TimerState = {
 };
 
 const timerSlice = createSlice({
-  name: 'timer',
+  name: "timer",
   initialState,
   reducers: {
     startTimer: (state) => {
@@ -35,23 +35,27 @@ const timerSlice = createSlice({
     resetTimer: (state) => {
       state.isRunning = false;
       state.timeLeft = state.focusDuration * 60;
-      state.mode = 'focus';
+      state.mode = "focus";
     },
     tick: (state) => {
       if (state.timeLeft > 0) {
         state.timeLeft -= 1;
       } else {
         state.isRunning = false;
-        
+
         // Handle timer completion
-        if (state.mode === 'focus') {
+        if (state.mode === "focus") {
           state.completedPomodoros += 1;
           // After 4 pomodoros, take a long break, otherwise short break
-          state.mode = state.completedPomodoros % 4 === 0 ? 'longBreak' : 'shortBreak';
-          state.timeLeft = (state.completedPomodoros % 4 === 0 ? state.longBreakDuration : state.shortBreakDuration) * 60;
+          state.mode =
+            state.completedPomodoros % 4 === 0 ? "longBreak" : "shortBreak";
+          state.timeLeft =
+            (state.completedPomodoros % 4 === 0
+              ? state.longBreakDuration
+              : state.shortBreakDuration) * 60;
         } else {
           // Break is over, go back to focus
-          state.mode = 'focus';
+          state.mode = "focus";
           state.timeLeft = state.focusDuration * 60;
         }
       }
@@ -59,16 +63,16 @@ const timerSlice = createSlice({
     setMode: (state, action: PayloadAction<TimerMode>) => {
       state.mode = action.payload;
       state.isRunning = false;
-      
+
       // Reset timer based on the new mode
       switch (action.payload) {
-        case 'focus':
+        case "focus":
           state.timeLeft = state.focusDuration * 60;
           break;
-        case 'shortBreak':
+        case "shortBreak":
           state.timeLeft = state.shortBreakDuration * 60;
           break;
-        case 'longBreak':
+        case "longBreak":
           state.timeLeft = state.longBreakDuration * 60;
           break;
       }
@@ -82,24 +86,24 @@ const timerSlice = createSlice({
       }>
     ) => {
       const { focus, shortBreak, longBreak } = action.payload;
-      
+
       if (focus !== undefined) {
         state.focusDuration = focus;
-        if (state.mode === 'focus') {
+        if (state.mode === "focus") {
           state.timeLeft = focus * 60;
         }
       }
-      
+
       if (shortBreak !== undefined) {
         state.shortBreakDuration = shortBreak;
-        if (state.mode === 'shortBreak') {
+        if (state.mode === "shortBreak") {
           state.timeLeft = shortBreak * 60;
         }
       }
-      
+
       if (longBreak !== undefined) {
         state.longBreakDuration = longBreak;
-        if (state.mode === 'longBreak') {
+        if (state.mode === "longBreak") {
           state.timeLeft = longBreak * 60;
         }
       }

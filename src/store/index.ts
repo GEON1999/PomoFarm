@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import storage from '@/utils/storage';
 import { useDispatch, useSelector, TypedUseSelectorHook } from "react-redux";
 import { combineReducers } from "redux";
 import {
@@ -29,6 +30,9 @@ export const rootReducer = combineReducers({
 // Define root state type
 export type RootState = ReturnType<typeof rootReducer>;
 
+// Load persisted state from localStorage
+const persistedState = storage.loadState?.() || undefined;
+
 // Configure store with middleware
 const store = configureStore({
   reducer: rootReducer,
@@ -39,6 +43,12 @@ const store = configureStore({
       },
     }),
   devTools: import.meta.env.DEV,
+  preloadedState: persistedState,
+});
+
+// Subscribe to store changes and persist to localStorage
+store.subscribe(() => {
+  storage.saveState?.(store.getState());
 });
 
 // Create a no-op persistor for now

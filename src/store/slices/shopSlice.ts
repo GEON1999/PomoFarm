@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AppThunk } from '@/store';
-import { addDiamonds, spendDiamonds } from './userSlice';
+import type { RootState, AppDispatch } from '@/store';
+import { spendDiamonds } from './userSlice';
+import { buyItem } from './farmSlice';
 
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 
@@ -9,7 +10,7 @@ export interface ShopItem {
   name: string;
   description: string;
   price: number;
-  type: 'crop' | 'animal' | 'decoration' | 'booster';
+  type: 'seed' | 'animal' | 'decoration' | 'booster';
   rarity: Rarity;
   image: string;
   quantity?: number;
@@ -26,36 +27,35 @@ interface ShopState {
   featuredItems: string[]; // IDs of featured items
 }
 
-// Helper function to generate a random ID
-const generateId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
+// generateId 미사용으로 삭제
 
 // Initial shop items
 const initialItems: ShopItem[] = [
   // Crops
   {
-    id: 'carrot_seeds',
+    id: 'carrot_seed',
     name: 'Carrot Seeds',
     description: 'Grows into delicious carrots! Takes 1 hour to grow.',
     price: 10,
-    type: 'crop',
+    type: 'seed',
     rarity: 'common',
     image: 'carrot_seeds.png',
   },
   {
-    id: 'tomato_seeds',
+    id: 'tomato_seed',
     name: 'Tomato Seeds',
     description: 'Grows into juicy tomatoes! Takes 2 hours to grow.',
     price: 20,
-    type: 'crop',
+    type: 'seed',
     rarity: 'common',
     image: 'tomato_seeds.png',
   },
   {
-    id: 'pumpkin_seeds',
+    id: 'pumpkin_seed',
     name: 'Pumpkin Seeds',
     description: 'Grows into big pumpkins! Takes 4 hours to grow.',
     price: 40,
-    type: 'crop',
+    type: 'seed',
     rarity: 'uncommon',
     image: 'pumpkin_seeds.png',
   },
@@ -156,10 +156,11 @@ const shopSlice = createSlice({
 });
 
 // Thunks
-export const purchaseItem = (itemId: string, quantity: number = 1): AppThunk<Promise<boolean>> => 
-  async (dispatch, getState) => {
+// 구매 thunk: 타입 명시
+export const purchaseItem = (itemId: string, quantity: number = 1) =>
+  async (dispatch: AppDispatch, getState: () => RootState): Promise<boolean> => {
     const state = getState();
-    const item = state.shop.items.find(i => i.id === itemId);
+    const item = state.shop.items.find((i: ShopItem) => i.id === itemId);
     
     if (!item) {
       console.error('Item not found:', itemId);
@@ -178,8 +179,10 @@ export const purchaseItem = (itemId: string, quantity: number = 1): AppThunk<Pro
       // Spend diamonds
       dispatch(spendDiamonds(totalPrice));
       
-      // Add item to inventory or apply effect
-      // This would be handled by the appropriate slice (farm, user, etc.)
+      // 실제 농장 인벤토리/동물에 반영
+      if (item.type === 'animal' || item.type === 'seed') {
+        dispatch(buyItem({ itemId, quantity }));
+      }
       // For now, we'll just log the purchase
       console.log(`Purchased ${quantity}x ${item.name} for ${totalPrice} diamonds`);
       
@@ -191,30 +194,65 @@ export const purchaseItem = (itemId: string, quantity: number = 1): AppThunk<Pro
   };
 
 // Gacha function
-export const pullGacha = (gachaType: 'single' | 'multi' = 'single'): AppThunk<Promise<ShopItem[]>> => 
-  async (dispatch, getState) => {
+// AppThunk 타입 명확화 (비동기 Thunk)
+// 가챠 카테고리별 뽑기 (씨앗/동물 pool 분리)
+export const pullGacha = (category: 'plant' | 'animal' | 'crop' | 'animal_product', gachaType: 'single' | 'multi' = 'single') =>
+  async (dispatch: AppDispatch, getState: () => RootState): Promise<ShopItem[]> => {
     const state = getState();
     const pullCount = gachaType === 'single' ? 1 : 10;
-    const pullPrice = gachaType === 'single' ? 100 : 900; // 10% discount for multi
-    
-    // Check if user has enough diamonds
-    if (state.user.diamonds < pullPrice) {
-      throw new Error('Not enough diamonds');
+    let enoughResource = true;
+    let costLabel = '';
+    if (category === 'crop') {
+      // crop 가챠: 임의의 crop 5개 필요
+      const crops = Object.values(state.user.inventory).filter((item: any) => item.type === 'crop');
+      const totalCrops = crops.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      if (totalCrops < 5 * pullCount) {
+        throw new Error('Not enough crops for gacha');
+      }
+      costLabel = `${5 * pullCount} crops`;
+    } else if (category === 'animal_product') {
+      // animal_product 가챠: 임의의 animal_product 3개 필요
+      const animalProds = Object.values(state.user.inventory).filter((item: any) => item.type === 'animal_product');
+      const totalProds = animalProds.reduce((sum: number, item: any) => sum + item.quantity, 0);
+      if (totalProds < 3 * pullCount) {
+        throw new Error('Not enough animal products for gacha');
+      }
+      costLabel = `${3 * pullCount} animal products`;
+    } else {
+      // 다이아로 진행
+      const pullPrice = gachaType === 'single' ? 100 : 900;
+      if (state.user.diamonds < pullPrice) {
+        throw new Error('Not enough diamonds');
+      }
+      costLabel = `${pullPrice} diamonds`;
     }
     
     try {
-      // Spend diamonds
-      dispatch(spendDiamonds(pullPrice));
+      // 자원 차감
+      if (category === 'crop') {
+        let left = 5 * pullCount;
+        for (const item of Object.values(state.user.inventory)) {
+          if (item.type === 'crop' && left > 0) {
+            const use = Math.min(item.quantity, left);
+            dispatch({type: 'user/removeFromInventory', payload: {itemId: item.id, quantity: use}});
+            left -= use;
+          }
+        }
+      } else if (category === 'animal_product') {
+        let left = 3 * pullCount;
+        for (const item of Object.values(state.user.inventory)) {
+          if (item.type === 'animal_product' && left > 0) {
+            const use = Math.min(item.quantity, left);
+            dispatch({type: 'user/removeFromInventory', payload: {itemId: item.id, quantity: use}});
+            left -= use;
+          }
+        }
+      } else {
+        const pullPrice = gachaType === 'single' ? 100 : 900;
+        dispatch(spendDiamonds(pullPrice));
+      }
       
-      // Determine pulls based on rarity weights
-      const rarityWeights = {
-        common: 60,
-        uncommon: 25,
-        rare: 10,
-        epic: 4,
-        legendary: 1,
-      };
-      
+      // 뽑기 결과
       const results: ShopItem[] = [];
       
       for (let i = 0; i < pullCount; i++) {
@@ -227,19 +265,49 @@ export const pullGacha = (gachaType: 'single' | 'multi' = 'single'): AppThunk<Pr
         else if (roll > 70) rarity = 'rare';
         else if (roll > 40) rarity = 'uncommon';
         
-        // Filter items by rarity and pick a random one
-        const eligibleItems = state.shop.items.filter(item => item.rarity === rarity);
+        // 카테고리별 뽑기 pool 분리
+        let pool: ShopItem[] = [];
+        if (category === 'plant') {
+          pool = state.shop.items.filter((item: ShopItem) => item.type === 'seed');
+        } else if (category === 'animal') {
+          pool = state.shop.items.filter((item: ShopItem) => item.type === 'animal');
+        } else if (category === 'crop') {
+          pool = state.shop.items.filter((item: ShopItem) => item.type === 'crop');
+        } else if (category === 'animal_product') {
+          pool = state.shop.items.filter((item: ShopItem) => item.type === 'animal_product');
+        } else {
+          pool = state.shop.items;
+        }
+        
+        const eligibleItems = pool.filter((item: ShopItem) => item.rarity === rarity);
+        
         if (eligibleItems.length > 0) {
           const randomIndex = Math.floor(Math.random() * eligibleItems.length);
           results.push(eligibleItems[randomIndex]);
         } else {
-          // Fallback to any item if no items of the selected rarity exist
-          const fallbackIndex = Math.floor(Math.random() * state.shop.items.length);
-          results.push(state.shop.items[fallbackIndex]);
+          // Fallback: 카테고리 pool에서 아무거나
+          const fallbackPool: ShopItem[] = state.shop.items.filter((item: ShopItem) => {
+             if (category === 'plant') return item.type === 'seed';
+             if (category === 'animal') return item.type === 'animal';
+             if (category === 'crop') return item.type === ('crop' as ShopItem['type']);
+             if (category === 'animal_product') return item.type === ('animal_product' as ShopItem['type']);
+             return false;
+           });
+          if (fallbackPool.length > 0) {
+            const fallbackIndex = Math.floor(Math.random() * fallbackPool.length);
+            results.push(fallbackPool[fallbackIndex]);
+          }
         }
       }
       
-      // Here you would typically add the pulled items to the user's inventory
+      // Add pulled items to farm inventory/animals
+      // 뽑은 아이템을 농장 인벤토리/동물에 반영
+      results.forEach((item: ShopItem) => {
+        if (item.type === 'seed' || item.type === 'animal') {
+          dispatch(buyItem({ itemId: item.id, quantity: 1, skipGoldCheck: true }));
+        }
+      });
+      // 디버깅용 로그
       console.log('Gacha results:', results);
       
       return results;

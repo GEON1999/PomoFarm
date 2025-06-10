@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppSelector } from '@/store';
+import type { InventoryItem } from '@/store/slices/farmSlice';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,13 +13,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { inventory } = useAppSelector((state) => state.farm);
 
   // Calculate total crops and animal products from inventory
-  const cropCount = inventory
-    .filter(item => item.type === 'crop')
-    .reduce((sum, item) => sum + item.quantity, 0);
-    
-  const productCount = inventory
-    .filter(item => item.type === 'product')
-    .reduce((sum, item) => sum + item.quantity, 0);
+  // inventory는 Record<string, InventoryItem>이므로 Object.values로 변환
+  const cropCount = Object.values(inventory)
+    .filter((item: InventoryItem) => item.itemId.endsWith('_seed'))
+    .reduce((sum: number, item: InventoryItem) => sum + item.quantity, 0);
+
+  // 동물 생산품(예: egg, milk 등) 카운트
+  const productCount = Object.values(inventory)
+    .filter((item: InventoryItem) => !item.itemId.endsWith('_seed'))
+    .reduce((sum: number, item: InventoryItem) => sum + item.quantity, 0);
 
   // Navigation items
   const navItems = [

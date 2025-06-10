@@ -1,53 +1,53 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { CROP_DEFINITIONS, ANIMAL_DEFINITIONS, SHOP_ITEMS, getCropBySeedId } from '@/constants/farm';
 
+// Interfaces
 export interface FarmPlot {
   id: string;
-  cropId: string | null;
-  plantedAt: number | null; // timestamp
+  cropId: string | null; // e.g., 'tomato'
+  plantedAt: number | null;
   growthProgress: number; // 0-100
-  isWatered: boolean;
 }
 
 export interface Animal {
   id: string;
-  type: string;
+  type: string; // e.g., 'chicken'
   happiness: number; // 0-100
-  lastFed: number; // timestamp
-  productReady: boolean;
+  lastFed: number;
+  productReadyAt: number | null;
 }
 
 export interface InventoryItem {
-  id: string;
-  type: 'crop' | 'animal' | 'product' | 'decoration';
-  itemId: string;
+  itemId: string; // e.g., 'tomato_seed', 'tomato', 'egg'
   quantity: number;
 }
 
 interface FarmState {
+  gold: number;
   plots: FarmPlot[];
   animals: Animal[];
-  inventory: InventoryItem[];
-  lastHarvest: number | null; // timestamp
-  lastUpdated: number; // timestamp
+  inventory: Record<string, InventoryItem>; // Use a record for easier access
+  lastUpdated: number;
 }
 
-// Helper function to generate a unique ID
-const generateId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
+// Helpers
+const generateId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
-// Initialize with 9 empty plots
 const initialPlots: FarmPlot[] = Array(9).fill(null).map((_, index) => ({
   id: `plot_${index}`,
   cropId: null,
   plantedAt: null,
   growthProgress: 0,
-  isWatered: false,
 }));
 
+// Initial State
 const initialState: FarmState = {
+  gold: 100,
   plots: initialPlots,
   animals: [],
-  inventory: [],
-  lastHarvest: null,
+  inventory: {
+    tomato_seed: { itemId: 'tomato_seed', quantity: 5 }, // Start with some seeds
+  },
   lastUpdated: Date.now(),
 };
 
@@ -55,150 +55,163 @@ const farmSlice = createSlice({
   name: 'farm',
   initialState,
   reducers: {
-    plantCrop: (state, action: PayloadAction<{ plotId: string; cropId: string }>) => {
-      const { plotId, cropId } = action.payload;
-      const plot = state.plots.find(p => p.id === plotId);
-      
-      if (plot && !plot.cropId) {
-        plot.cropId = cropId;
-        plot.plantedAt = Date.now();
-        plot.growthProgress = 0;
-        plot.isWatered = false;
-        state.lastUpdated = Date.now();
-      }
-    },
-    
-    waterPlot: (state, action: PayloadAction<string>) => {
-      const plot = state.plots.find(p => p.id === action.payload);
-      if (plot) {
-        plot.isWatered = true;
-        state.lastUpdated = Date.now();
-      }
-    },
-    
-    harvestPlot: (state, action: PayloadAction<string>) => {
-      const plotIndex = state.plots.findIndex(p => p.id === action.payload);
-      const plot = state.plots[plotIndex];
-      
-      if (plot && plot.cropId && plot.growthProgress >= 100) {
-        // Add to inventory
-        const itemIndex = state.inventory.findIndex(
-          item => item.itemId === plot.cropId && item.type === 'crop'
-        );
-        
-        if (itemIndex >= 0) {
-          state.inventory[itemIndex].quantity += 1;
-        } else {
-          state.inventory.push({
-            id: generateId('item'),
-            type: 'crop',
-            itemId: plot.cropId,
-            quantity: 1,
-          });
-        }
-        
-        // Reset plot
-        state.plots[plotIndex] = {
-          ...state.plots[plotIndex],
-          cropId: null,
-          plantedAt: null,
-          growthProgress: 0,
-          isWatered: false,
-        };
-        
-        state.lastHarvest = Date.now();
-        state.lastUpdated = Date.now();
-      }
-    },
-    
-    addAnimal: (state, action: PayloadAction<{ type: string }>) => {
-      const newAnimal: Animal = {
-        id: generateId('animal'),
-        type: action.payload.type,
-        happiness: 50, // Start with 50% happiness
-        lastFed: Date.now(),
-        productReady: false,
-      };
-      
-      state.animals.push(newAnimal);
-      state.lastUpdated = Date.now();
-    },
-    
-    feedAnimal: (state, action: PayloadAction<string>) => {
-      const animal = state.animals.find(a => a.id === action.payload);
-      if (animal) {
-        animal.lastFed = Date.now();
-        animal.happiness = Math.min(100, animal.happiness + 20); // Increase happiness when fed
-        state.lastUpdated = Date.now();
-      }
-    },
-    
-    collectProduct: (state, action: PayloadAction<string>) => {
-      const animal = state.animals.find(a => a.id === action.payload);
-      if (animal && animal.productReady) {
-        const productType = `${animal.type}_product`; // e.g., 'chicken_egg'
-        const itemIndex = state.inventory.findIndex(
-          item => item.itemId === productType && item.type === 'product'
-        );
-        
-        if (itemIndex >= 0) {
-          state.inventory[itemIndex].quantity += 1;
-        } else {
-          state.inventory.push({
-            id: generateId('product'),
-            type: 'product',
-            itemId: productType,
-            quantity: 1,
-          });
-        }
-        
-        animal.productReady = false;
-        state.lastUpdated = Date.now();
-      }
-    },
-    
-    updateGrowth: (state) => {
+    // Game loop tick
+    updateFarmState: (state) => {
       const now = Date.now();
-      const growthRate = 0.1; // Adjust growth rate as needed
-      
+
+      // Update plots
       state.plots.forEach(plot => {
         if (plot.cropId && plot.plantedAt) {
-          // Only grow if watered
-          if (plot.isWatered) {
-            plot.growthProgress = Math.min(100, plot.growthProgress + growthRate);
-          }
-          // Reset watered status after some time
-          if (now - (plot.plantedAt + 3600000) > 0) { // 1 hour
-            plot.isWatered = false;
+          const cropData = CROP_DEFINITIONS[plot.cropId];
+          if (cropData && plot.growthProgress < 100) {
+            const totalGrowthTime = cropData.growthTime;
+            const progress = ((now - plot.plantedAt) / (totalGrowthTime * 1000)) * 100;
+            plot.growthProgress = Math.min(100, progress);
           }
         }
       });
-      
-      // Update animal states
+
+      // Update animals
       state.animals.forEach(animal => {
-        // Animals get less happy over time
-        const hoursSinceFed = (now - animal.lastFed) / (1000 * 60 * 60);
-        animal.happiness = Math.max(0, animal.happiness - (hoursSinceFed * 5));
-        
-        // If animal is happy enough, produce items
-        if (animal.happiness > 70 && !animal.productReady) {
-          animal.productReady = true;
+        const animalData = ANIMAL_DEFINITIONS[animal.type];
+        if (animalData && !animal.productReadyAt) {
+            // Simplified: product becomes ready after productionTime
+            const timeSinceFed = now - animal.lastFed;
+            if (timeSinceFed > animalData.product.productionTime * 1000) {
+                animal.productReadyAt = now;
+            }
         }
       });
-      
+
       state.lastUpdated = now;
+    },
+
+    buyItem: (state, action: PayloadAction<{ itemId: string; quantity: number; skipGoldCheck?: boolean }>) => {
+      const { itemId, quantity, skipGoldCheck } = action.payload;
+      const shopItem = SHOP_ITEMS[itemId];
+      if (!shopItem) return;
+
+      const totalCost = shopItem.buyPrice * quantity;
+      if (!skipGoldCheck && state.gold < totalCost) return;
+
+      if (shopItem.type === 'animal') {
+        for (let i = 0; i < quantity; i++) {
+          const newAnimal: Animal = {
+            id: generateId('animal'),
+            type: shopItem.id,
+            happiness: 100,
+            lastFed: Date.now(),
+            productReadyAt: null,
+          };
+          state.animals.push(newAnimal);
+        }
+      } else { // seed
+        const inventoryItem = state.inventory[itemId];
+        if (inventoryItem) {
+          inventoryItem.quantity += quantity;
+        } else {
+          state.inventory[itemId] = { itemId, quantity };
+        }
+      }
+      
+      if (!skipGoldCheck) {
+        state.gold -= totalCost;
+      }
+    },
+
+    sellItem: (state, action: PayloadAction<{ itemId: string; quantity: number }>) => {
+        const { itemId, quantity } = action.payload;
+        const inventoryItem = state.inventory[itemId];
+        if (!inventoryItem || inventoryItem.quantity < quantity) return;
+
+        let sellPrice = 0;
+        const crop = Object.values(CROP_DEFINITIONS).find(c => c.id === itemId);
+        const animalProduct = Object.values(ANIMAL_DEFINITIONS).find(a => a.product.id === itemId);
+
+        if (crop) {
+            sellPrice = crop.sellPrice;
+        } else if (animalProduct) {
+            sellPrice = animalProduct.product.sellPrice;
+        }
+
+        if(sellPrice > 0){
+            inventoryItem.quantity -= quantity;
+            if (inventoryItem.quantity <= 0) {
+                delete state.inventory[itemId];
+            }
+            state.gold += sellPrice * quantity;
+        }
+    },
+
+    plantCrop: (state, action: PayloadAction<{ plotId: string; seedId: string }>) => {
+      const { plotId, seedId } = action.payload;
+      const plot = state.plots.find(p => p.id === plotId);
+      if (!plot || plot.cropId) return;
+
+      const seedInInventory = state.inventory[seedId];
+      if (!seedInInventory || seedInInventory.quantity <= 0) return;
+
+      const cropData = getCropBySeedId(seedId);
+      if (!cropData) return;
+
+      // Consume seed
+      seedInInventory.quantity -= 1;
+       if (seedInInventory.quantity <= 0) {
+          delete state.inventory[seedId];
+       }
+
+      // Plant crop
+      plot.cropId = cropData.id;
+      plot.plantedAt = Date.now();
+      plot.growthProgress = 0;
+    },
+
+    harvestPlot: (state, action: PayloadAction<{ plotId: string }>) => {
+      const plot = state.plots.find(p => p.id === action.payload.plotId);
+      if (!plot || !plot.cropId || plot.growthProgress < 100) return;
+
+      const cropId = plot.cropId;
+      const inventoryItem = state.inventory[cropId];
+      if (inventoryItem) {
+        inventoryItem.quantity += 1;
+      } else {
+        state.inventory[cropId] = { itemId: cropId, quantity: 1 };
+      }
+
+      // Reset plot
+      plot.cropId = null;
+      plot.plantedAt = null;
+      plot.growthProgress = 0;
+    },
+    
+    collectProduct: (state, action: PayloadAction<{ animalId: string }>) => {
+        const animal = state.animals.find(a => a.id === action.payload.animalId);
+        if (!animal || !animal.productReadyAt) return;
+
+        const animalData = ANIMAL_DEFINITIONS[animal.type];
+        if (!animalData) return;
+
+        const productId = animalData.product.id;
+        const inventoryItem = state.inventory[productId];
+        if (inventoryItem) {
+            inventoryItem.quantity += 1;
+        } else {
+            state.inventory[productId] = { itemId: productId, quantity: 1 };
+        }
+
+        animal.productReadyAt = null;
+        animal.lastFed = Date.now(); // Reset timer after collection
     },
   },
 });
 
 export const {
+  updateFarmState,
+  buyItem,
+  sellItem,
   plantCrop,
-  waterPlot,
   harvestPlot,
-  addAnimal,
-  feedAnimal,
   collectProduct,
-  updateGrowth,
 } = farmSlice.actions;
 
 export default farmSlice.reducer;
