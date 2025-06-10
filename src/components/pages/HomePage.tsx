@@ -9,6 +9,7 @@ import {
   updateDurations,
   TimerMode,
 } from "@/store/slices/timerSlice";
+import { setAccumulateOvertime } from "@/store/slices/settingsSlice";
 import { completePomodoro } from "@/store/slices/userSlice";
 import { formatTime } from "@/utils/formatTime";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +28,7 @@ const HomePage: React.FC = () => {
     longBreakDuration,
     accumulatedFocusTime,
   } = useAppSelector((state) => state.timer);
+  const { accumulateOvertime } = useAppSelector((state) => state.settings);
   const { level, experience } = useAppSelector((state) => state.user);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -82,7 +84,7 @@ const HomePage: React.FC = () => {
   const handleUpdateDuration = (amount: number) => {
     if (isRunning || mode !== "focus") return;
     const newDuration = focusDuration + amount;
-    if (newDuration >= 5 && newDuration <= 120) {
+    if (newDuration >= 0.2 && newDuration <= 90) {
       dispatch(updateDurations({ focus: newDuration }));
     }
   };
@@ -176,7 +178,7 @@ const HomePage: React.FC = () => {
           </div>
         </motion.div>
 
-        {mode === "focus" && !isRunning && (
+        {mode === "focus" && (
           <div className="flex justify-center items-center gap-4 mb-8 text-white">
             <motion.button
               whileTap={{ scale: 0.9 }}
@@ -195,6 +197,30 @@ const HomePage: React.FC = () => {
             </motion.button>
           </div>
         )}
+
+        <div className="mt-8 pt-6 border-t border-white/20">
+          <div className="flex justify-between items-center">
+            <span className="text-white font-medium">
+              {t("accumulateOvertime", "Accumulate Overtime")}
+            </span>
+            <motion.div
+              className={`w-14 h-8 flex items-center rounded-full p-1 cursor-pointer ${
+                accumulateOvertime ? "bg-green-400" : "bg-gray-400"
+              }`}
+              onClick={() =>
+                dispatch(setAccumulateOvertime(!accumulateOvertime))
+              }
+              transition={{ type: "spring", stiffness: 700, damping: 30 }}
+            >
+              <motion.div
+                className="w-6 h-6 bg-white rounded-full shadow-md"
+                layout
+                transition={{ type: "spring", stiffness: 700, damping: 30 }}
+                style={{ x: accumulateOvertime ? "100%" : "0%" }}
+              />
+            </motion.div>
+          </div>
+        </div>
 
         <div className="flex justify-center space-x-4 mt-8">
           <motion.button

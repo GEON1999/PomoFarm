@@ -42,5 +42,6 @@
   "gachaFailed": "뽑기에 실패했습니다. 다시 시도해주세요.",
   "unexpectedError": "예상치 못한 오류가 발생했습니다.",
   "gachaResults": "뽑기 결과",
-  "close": "닫기"
+  "close": "닫기",
+  "accumulateOvertime": "초과 시간 누적"
 }

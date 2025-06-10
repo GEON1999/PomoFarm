@@ -4,11 +4,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { updateFarmState } from "@/store/slices/farmSlice";
 import { refreshShop } from "@/store/slices/shopSlice";
-import {
-  syncTimer,
-  tick,
-  incrementAccumulatedFocusTime,
-} from "@/store/slices/timerSlice";
+import { tick, syncTimer } from "@/store/slices/timerSlice";
 import { useTranslation } from "react-i18next";
 
 // Layout Components
@@ -27,7 +23,10 @@ import Notification from "@/components/common/Notification";
 const App: React.FC = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const { isRunning, mode } = useAppSelector((state) => state.timer);
+  const { isRunning } = useAppSelector((state) => state.timer);
+  const { autoStartBreaks, accumulateOvertime } = useAppSelector(
+    (state) => state.settings,
+  );
   const { language } = useAppSelector((state) => state.settings);
   const { i18n } = useTranslation();
 
@@ -52,10 +51,7 @@ const App: React.FC = () => {
       // Update farm growth and animal states
       dispatch(updateFarmState());
       if (isRunning) {
-        dispatch(tick());
-        if (mode === "focus") {
-          dispatch(incrementAccumulatedFocusTime());
-        }
+        dispatch(tick({ autoStartBreaks, accumulateOvertime }));
       }
     }, 1000);
 

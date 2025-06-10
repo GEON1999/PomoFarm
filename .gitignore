@@ -16,3 +16,7 @@ build/
 
 # windsurfrules
 .windsurfrules
+
+# dist
+dist
+dist/*

@@ -12,6 +12,7 @@ interface TimerState {
   completedPomodoros: number;
   endTime: number | null; // Timestamp for when the timer should end
   accumulatedFocusTime: number; // in seconds
+  isOvertime: boolean;
 }
 
 const initialState: TimerState = {
@@ -24,6 +25,7 @@ const initialState: TimerState = {
   completedPomodoros: 0,
   endTime: null,
   accumulatedFocusTime: 0,
+  isOvertime: false,
 };
 
 const timerSlice = createSlice({
@@ -32,38 +34,66 @@ const timerSlice = createSlice({
   reducers: {
     startTimer: (state) => {
       state.isRunning = true;
-      state.endTime = Date.now() + state.timeLeft * 1000;
+      if (!state.isOvertime) {
+        state.endTime = Date.now() + state.timeLeft * 1000;
+      }
     },
     pauseTimer: (state) => {
       state.isRunning = false;
     },
-    resetTimer: () => initialState,
-    tick: (state) => {
+    resetTimer: (state) => {
+      state.isRunning = false;
+      state.isOvertime = false;
+      state.endTime = null;
+      state.mode = "focus";
+      state.timeLeft = state.focusDuration * 60;
+    },
+    tick: (
+      state,
+      action: PayloadAction<{ autoStartBreaks: boolean; accumulateOvertime: boolean }>,
+    ) => {
       if (!state.isRunning) return;
 
-      if (state.timeLeft > 0) {
+      if (state.mode === "focus") {
+        if (!state.isOvertime || (state.isOvertime && action.payload.accumulateOvertime)) {
+          state.accumulatedFocusTime += 1;
+        }
+      }
+
+      if (state.timeLeft > 0 && !state.isOvertime) {
         state.timeLeft -= 1;
       } else {
-        state.isRunning = false;
-        state.endTime = null;
-
         if (state.mode === "focus") {
-          state.completedPomodoros += 1;
-          state.mode =
-            state.completedPomodoros % 4 === 0 ? "longBreak" : "shortBreak";
-          state.timeLeft =
-            (state.completedPomodoros % 4 === 0
-              ? state.longBreakDuration
-              : state.shortBreakDuration) * 60;
+          if (!state.isOvertime) {
+            state.completedPomodoros += 1;
+          }
+
+          if (action.payload.autoStartBreaks) {
+            state.mode =
+              state.completedPomodoros % 4 === 0 ? "longBreak" : "shortBreak";
+            state.timeLeft =
+              (state.completedPomodoros % 4 === 0
+                ? state.longBreakDuration
+                : state.shortBreakDuration) * 60;
+            state.isOvertime = false;
+            state.endTime = Date.now() + state.timeLeft * 1000;
+          } else {
+            state.isOvertime = true;
+            state.timeLeft += 1; // Count up for overtime
+          }
         } else {
+          // End of a break
           state.mode = "focus";
           state.timeLeft = state.focusDuration * 60;
+          state.isOvertime = false;
+          state.endTime = Date.now() + state.timeLeft * 1000;
         }
       }
     },
     setMode: (state, action: PayloadAction<TimerMode>) => {
       state.mode = action.payload;
       state.isRunning = false;
+      state.isOvertime = false;
       state.endTime = null;
 
       switch (action.payload) {
@@ -107,14 +137,11 @@ const timerSlice = createSlice({
       }
     },
     syncTimer: (state) => {
-      if (state.isRunning && state.endTime) {
+      if (state.isRunning && state.endTime && !state.isOvertime) {
         const now = Date.now();
         const remainingTime = Math.round((state.endTime - now) / 1000);
         state.timeLeft = Math.max(0, remainingTime);
       }
-    },
-    incrementAccumulatedFocusTime: (state) => {
-      state.accumulatedFocusTime += 1;
     },
     resetAccumulatedFocusTime: (state) => {
       state.accumulatedFocusTime = 0;
@@ -130,7 +157,6 @@ export const {
   setMode,
   updateDurations,
   syncTimer,
-  incrementAccumulatedFocusTime,
   resetAccumulatedFocusTime,
 } = timerSlice.actions;
 
