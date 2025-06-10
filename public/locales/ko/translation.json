@@ -18,6 +18,7 @@
   "settings": "설정",
   "gameSettings": "게임 설정",
   "farm": "농장",
+  "animals": "동물",
   "shop": "상점",
   "home": "홈",
   "farmGrid": "농장 그리드",
@@ -29,5 +30,17 @@
   "refreshShop": "상점 새로고침",
   "inventory": "인벤토리",
   "plant": "심기",
-  "harvest": "수확"
+  "harvest": "수확",
+  "plantGacha": "식물 뽑기",
+  "animalGacha": "동물 뽑기",
+  "diamonds": "다이아몬드",
+  "singlePull": "1회 뽑기",
+  "multiPull": "10회 뽑기 (10% 할인)",
+  "plantGachaDescription": "랜덤한 식물 씨앗을 얻습니다.",
+  "animalGachaDescription": "랜덤한 동물을 얻습니다.",
+  "gachaSuccess": "{{count}}개의 아이템을 성공적으로 뽑았습니다!",
+  "gachaFailed": "뽑기에 실패했습니다. 다시 시도해주세요.",
+  "unexpectedError": "예상치 못한 오류가 발생했습니다.",
+  "gachaResults": "뽑기 결과",
+  "close": "닫기"
 }

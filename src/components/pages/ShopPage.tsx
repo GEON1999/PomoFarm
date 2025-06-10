@@ -158,7 +158,7 @@ const ShopPage: React.FC = () => {
                 onClick={() => setShowResult(false)} 
                 className="block mx-auto px-8 py-3 bg-green-500 text-white rounded-full font-bold text-lg shadow-lg"
               >
-                Close
+                {t('close', 'Close')}
               </motion.button>
             </motion.div>
           </motion.div>

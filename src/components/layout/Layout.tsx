@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAppSelector } from "@/store";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Logo from "@/components/ui/Logo";
 
 interface LayoutProps {
@@ -9,14 +9,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { diamonds, gold } = useAppSelector((state) => state.user);
-  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const navLinks = [
-    { path: "/", label: "Home" },
-    { path: "/farm", label: "Farm" },
-    { path: "/shop", label: "Shop" },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">

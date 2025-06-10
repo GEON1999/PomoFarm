@@ -29,5 +29,17 @@
   "refreshShop": "Refresh Shop",
   "inventory": "Inventory",
   "plant": "Plant",
-  "harvest": "Harvest"
+  "harvest": "Harvest",
+  "plantGacha": "Plant Gacha",
+  "animalGacha": "Animal Gacha",
+  "diamonds": "Diamonds",
+  "singlePull": "Single Pull",
+  "multiPull": "Multi Pull (10% off)",
+  "plantGachaDescription": "Get a random plant seed.",
+  "animalGachaDescription": "Get a random animal.",
+  "gachaSuccess": "Successfully pulled {{count}} items!",
+  "gachaFailed": "Gacha pull failed. Please try again.",
+  "unexpectedError": "An unexpected error occurred.",
+  "gachaResults": "Gacha Results",
+  "close": "Close"
 }
